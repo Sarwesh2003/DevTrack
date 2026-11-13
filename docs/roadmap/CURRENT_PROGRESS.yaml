@@ -1,0 +1,45 @@
+version: 1
+updated_on: 2026-11-13
+timezone: Asia/Kolkata
+planning_horizon_weeks: 26
+tracks:
+  dsa:
+    curriculum: NeetCode 250
+    progress_checkpoint: trees_completed
+    previously_covered_categories:
+      - Arrays & Hashing
+      - Two Pointers
+      - Sliding Window
+      - Binary Search
+      - Linked List
+      - Stack
+      - Trees
+    next_new_category: Tries
+    sequencing_policy: "No new assignments before Tries; earlier categories are revision-only unless the user changes this setting."
+    roadmap_count_through_trees: 109
+    roadmap_count_from_tries_onward: 141
+    individual_problem_statuses: "Must be imported or confirmed; do not fabricate."
+    historical_solve_dates: "Unknown unless supplied in an import."
+    revision_baseline_action_required_for_undated_items: true
+  lld:
+    curriculum: CodeArmy LLD
+    progress_checkpoint: composite_design_pattern_completed
+    previously_covered:
+      - OOP and LLD foundations
+      - UML and modeling
+      - SOLID and design principles
+      - Creational design patterns
+      - Structural design patterns through Composite
+    next_new_topic: Bridge Pattern
+    subsequent_sequence: "Remaining structural patterns (including Flyweight where applicable), behavioral patterns, end-to-end projects, machine-coding readiness. Preserve verified CodeArmy lecture order."
+    prior_topics_policy: revision_only
+  core_java:
+    progress_checkpoint: start_of_supplied_roadmap
+    next_new_topic: A1 - Language, object model and type system
+    learning_emphasis: "Interview depth and internals; do not spend time on beginner syntax already used professionally."
+  hld:
+    progress_checkpoint: start_of_supplied_roadmap
+    next_new_topic: D1 - System design interview method and requirements
+  fde:
+    progress_checkpoint: start_of_supplied_roadmap
+    next_new_topic: E1 - Python for AI application engineering

@@ -1,0 +1,22 @@
+[package]
+name = "devtrack"
+version = "0.1.0"
+description = "Private, local-first Mac desktop app for engineering interview and FDE preparation"
+edition = "2021"
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5"
+thiserror = "1"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[profile.release]
+lto = true
+opt-level = 3
