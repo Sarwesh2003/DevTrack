@@ -3,7 +3,7 @@ import { useSettings } from '@/services/useSettings'
 type Page = 'dashboard' | 'settings' | 'roadmap'
 type Theme = 'dark' | 'light' | 'system'
 
-export default function Settings({ onNavigate, setTheme }: { onNavigate: (page: Page) => void; setTheme: (t: Theme) => void }) {
+export default function Settings({ onNavigate, theme, setTheme }: { onNavigate: (page: Page) => void; theme: Theme; setTheme: (t: Theme) => void }) {
   const { settings, loading, error, save } = useSettings()
 
   if (loading) return <div className="p-4">Loading settings...</div>
@@ -30,7 +30,7 @@ export default function Settings({ onNavigate, setTheme }: { onNavigate: (page: 
                 type="radio"
                 name="theme"
                 value="dark"
-                defaultChecked={settings.theme !== 'light'}
+                checked={theme === 'dark' || theme === 'system'}
                 className="accent-foreground"
                 onChange={() => {
                   setTheme('dark')
@@ -44,7 +44,7 @@ export default function Settings({ onNavigate, setTheme }: { onNavigate: (page: 
                 type="radio"
                 name="theme"
                 value="light"
-                defaultChecked={settings.theme === 'light'}
+                checked={theme === 'light'}
                 className="accent-foreground"
                 onChange={() => {
                   setTheme('light')

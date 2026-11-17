@@ -13,7 +13,12 @@ export default function App() {
 
   useEffect(() => {
     const root = window.document.documentElement
-    root.setAttribute('data-theme', theme)
+    if (theme === 'system') {
+      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      root.classList.toggle('dark', dark)
+    } else {
+      root.classList.toggle('dark', theme === 'dark')
+    }
   }, [theme])
 
   return (
@@ -21,7 +26,7 @@ export default function App() {
       {page === 'dashboard' ? (
         <Dashboard onNavigate={setPage} />
       ) : page === 'settings' ? (
-        <Settings onNavigate={setPage} setTheme={setTheme} />
+        <Settings onNavigate={setPage} theme={theme} setTheme={setTheme} />
       ) : (
         <Roadmap onNavigate={setPage} />
       )}
