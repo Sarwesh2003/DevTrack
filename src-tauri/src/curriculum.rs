@@ -219,7 +219,7 @@ pub async fn get_topics(module_id: String) -> TopicListResponse {
   };
 
   let mut stmt = match conn.prepare(
-    "SELECT id, module_id, key, title, status, priority, estimate_minutes, confidence, completion_criteria, notes, evidence, target_week, is_custom, source_ref, created_at, updated_at FROM topics WHERE module_id = ?1 ORDER BY position"
+    "SELECT id, module_id, key, title, status, priority, estimate_minutes, confidence, completion_criteria, notes, evidence, target_week, is_custom, source_ref, created_at, updated_at FROM topics WHERE module_id = ?1 ORDER BY key"
   ) {
     Ok(s) => s,
     Err(_) => return TopicListResponse { ok: false, topics: vec![] },

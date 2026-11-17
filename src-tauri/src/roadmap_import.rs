@@ -516,9 +516,16 @@ fn insert_topic(conn: &rusqlite::Connection, topic: &ParsedTopic) -> DbResult<St
 }
 
 fn insert_roadmap_week(conn: &rusqlite::Connection, phase_id: &str, week_number: i32) -> DbResult<String> {
+  if let Ok(existing) = conn.query_row(
+    "SELECT id FROM roadmap_weeks WHERE phase_id = ?1 AND week_number = ?2",
+    params![phase_id, week_number],
+    |row| row.get::<_, String>(0),
+  ) {
+    return Ok(existing);
+  }
   let id = Uuid::new_v4().to_string();
-  let _ = conn.execute(
-    "INSERT OR IGNORE INTO roadmap_weeks (id, phase_id, week_number, track_allocations, total_estimate_minutes, source_ref) VALUES (?1,?2,?3,?4,?5,?6)",
+  conn.execute(
+    "INSERT INTO roadmap_weeks (id, phase_id, week_number, track_allocations, total_estimate_minutes, source_ref) VALUES (?1,?2,?3,?4,?5,?6)",
     params![id, phase_id, week_number, None::<String>, None::<i32>, "roadmap:weekly_sequence"],
   )?;
   Ok(id)
@@ -531,25 +538,17 @@ fn insert_roadmap_phase(conn: &rusqlite::Connection, key: &str, name: &str, posi
     "INSERT OR IGNORE INTO roadmap_phases (id, key, name, position, source_ref) VALUES (?1,?2,?3,?4,?5)",
     params![id, key, name, position, "roadmap:phases"],
   )?;
-  Ok(id)
+  // Return the canonical id (existing row if the phase already existed).
+  let existing: String = conn.query_row(
+    "SELECT id FROM roadmap_phases WHERE key = ?1",
+    params![key],
+    |row| row.get(0),
+  )?;
+  Ok(existing)
 }
 
 #[tauri::command]
 pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse {
-  let content = &req.content;
-  
-  let (tracks, modules, topics) = match parse_roadmap(content) {
-    Ok(data) => data,
-    Err(e) => return ImportRoadmapResponse {
-      ok: false,
-      track_count: 0,
-      topic_count: 0,
-      week_count: 0,
-      warnings: vec![],
-      error: Some(format!("Failed to parse roadmap: {e}")),
-    },
-  };
-
   let mut conn = match open_connection() {
     Ok(c) => c,
     Err(e) => return ImportRoadmapResponse {
@@ -559,6 +558,22 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
       week_count: 0,
       warnings: vec![],
       error: Some(format!("Failed to open database: {e}")),
+    },
+  };
+
+  run_import(&mut conn, &req.content)
+}
+
+fn run_import(conn: &mut rusqlite::Connection, content: &str) -> ImportRoadmapResponse {
+  let (tracks, modules, topics) = match parse_roadmap(content) {
+    Ok(data) => data,
+    Err(e) => return ImportRoadmapResponse {
+      ok: false,
+      track_count: 0,
+      topic_count: 0,
+      week_count: 0,
+      warnings: vec![],
+      error: Some(format!("Failed to parse roadmap: {e}")),
     },
   };
 
@@ -572,9 +587,23 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
   }
 
   // Run migrations first
-  if let Err(e) = crate::migrations::ensure_schema(&mut conn) {
+  if let Err(e) = crate::migrations::ensure_schema(conn) {
     warnings.push(format!("Migration warning: {e}"));
   }
+
+  let tx = match conn.transaction() {
+    Ok(t) => t,
+    Err(e) => {
+      return ImportRoadmapResponse {
+        ok: false,
+        track_count: 0,
+        topic_count: 0,
+        week_count: 0,
+        warnings,
+        error: Some(format!("Failed to start import transaction: {e}")),
+      }
+    }
+  };
 
   // Insert roadmap phases (6 phases)
   let phase_names = [
@@ -588,7 +617,7 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
 
   let mut phase_ids = std::collections::HashMap::new();
   for (key, name, position) in phase_names.iter() {
-    match insert_roadmap_phase(&conn, key, name, *position) {
+    match insert_roadmap_phase(&tx, key, name, *position) {
       Ok(id) => { phase_ids.insert(key.to_string(), id); },
       Err(e) => warnings.push(format!("Phase insert warning: {e}")),
     }
@@ -596,14 +625,14 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
 
   // Insert tracks
   for track in &tracks {
-    if let Err(e) = insert_track(&conn, track) {
+    if let Err(e) = insert_track(&tx, track) {
       warnings.push(format!("Track insert warning ({}): {e}", track.key));
     }
   }
 
   // Insert modules
   for module in &modules {
-    if let Err(e) = insert_module(&conn, module) {
+    if let Err(e) = insert_module(&tx, module) {
       warnings.push(format!("Module insert warning ({}): {e}", module.key));
     }
   }
@@ -611,7 +640,7 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
   // Insert topics
   let mut topic_count = 0;
   for topic in &topics {
-    match insert_topic(&conn, topic) {
+    match insert_topic(&tx, topic) {
       Ok(_) => topic_count += 1,
       Err(e) => warnings.push(format!("Topic insert warning ({}): {e}", topic.key)),
     }
@@ -623,11 +652,15 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
     let phase_idx = ((week - 1) / 4).min(5);
     let phase_key = phase_names[phase_idx].0;
     if let Some(phase_id) = phase_ids.get(phase_key) {
-      match insert_roadmap_week(&conn, phase_id, week as i32) {
+      match insert_roadmap_week(&tx, phase_id, week as i32) {
         Ok(_) => week_count += 1,
         Err(e) => warnings.push(format!("Week insert warning ({week}): {e}")),
       }
     }
+  }
+
+  if let Err(e) = tx.commit() {
+    warnings.push(format!("Commit warning: {e}"));
   }
 
   ImportRoadmapResponse {
@@ -685,5 +718,47 @@ mod tests {
 
     let c1 = topics.iter().find(|t| t.key == "C1").expect("C1 present");
     assert!(c1.module_key == "C");
+  }
+
+  #[test]
+  fn reimport_is_idempotent_and_respects_foreign_keys() {
+    let mut conn = rusqlite::Connection::open_in_memory().expect("open in-memory db");
+    conn.pragma_update(None, "foreign_keys", "ON").expect("enable fk");
+
+    let first = run_import(&mut conn, ROADMAP);
+    assert!(first.ok, "first import failed: {:?}", first.error);
+    assert_eq!(first.track_count, 5);
+    assert_eq!(first.topic_count, 37);
+    assert_eq!(first.week_count, 26);
+
+    let phases: i64 = conn
+      .query_row("SELECT COUNT(*) FROM roadmap_phases", [], |r| r.get(0))
+      .unwrap();
+    let weeks: i64 = conn
+      .query_row("SELECT COUNT(*) FROM roadmap_weeks", [], |r| r.get(0))
+      .unwrap();
+    let topic_rows: i64 = conn
+      .query_row("SELECT COUNT(*) FROM topics", [], |r| r.get(0))
+      .unwrap();
+    assert_eq!(phases, 6);
+    assert_eq!(weeks, 26);
+    assert_eq!(topic_rows, 37);
+
+    // A second import must not fail on foreign keys or duplicate rows.
+    let second = run_import(&mut conn, ROADMAP);
+    assert!(second.ok, "re-import failed: {:?}", second.error);
+
+    let phases2: i64 = conn
+      .query_row("SELECT COUNT(*) FROM roadmap_phases", [], |r| r.get(0))
+      .unwrap();
+    let weeks2: i64 = conn
+      .query_row("SELECT COUNT(*) FROM roadmap_weeks", [], |r| r.get(0))
+      .unwrap();
+    let topic_rows2: i64 = conn
+      .query_row("SELECT COUNT(*) FROM topics", [], |r| r.get(0))
+      .unwrap();
+    assert_eq!(phases2, 6, "phases must not duplicate on re-import");
+    assert_eq!(weeks2, 26, "weeks must not duplicate on re-import");
+    assert_eq!(topic_rows2, 37, "topics must not duplicate on re-import");
   }
 }
