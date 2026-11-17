@@ -36,21 +36,21 @@ describe('api service', () => {
   it('saveSettings calls save_settings command', async () => {
     mockInvoke.mockResolvedValue({ ok: true })
     const result = await api.saveSettings({ theme: 'light' })
-    expect(mockInvoke).toHaveBeenCalledWith('save_settings', { settings: { theme: 'light' } })
+    expect(mockInvoke).toHaveBeenCalledWith('save_settings', { req: { settings: { theme: 'light' } } })
     expect(result.ok).toBe(true)
   })
 
   it('backupDatabase calls backup_database command', async () => {
     mockInvoke.mockResolvedValue({ ok: true, path: '/backup/devtrack.sqlite', error: undefined })
     const result = await api.backupDatabase('/backup/devtrack.sqlite')
-    expect(mockInvoke).toHaveBeenCalledWith('backup_database', { destination: '/backup/devtrack.sqlite' })
+    expect(mockInvoke).toHaveBeenCalledWith('backup_database', { req: { destination: '/backup/devtrack.sqlite' } })
     expect(result.ok).toBe(true)
   })
 
   it('restoreDatabase calls restore_database command', async () => {
     mockInvoke.mockResolvedValue({ ok: true, error: undefined })
     const result = await api.restoreDatabase('/backup/devtrack.sqlite')
-    expect(mockInvoke).toHaveBeenCalledWith('restore_database', { source: '/backup/devtrack.sqlite' })
+    expect(mockInvoke).toHaveBeenCalledWith('restore_database', { req: { source: '/backup/devtrack.sqlite' } })
     expect(result.ok).toBe(true)
   })
 
@@ -97,9 +97,11 @@ describe('api service', () => {
       title: 'Test Topic',
     })
     expect(mockInvoke).toHaveBeenCalledWith('upsert_topic', {
-      module_id: 'module-id',
-      key: 'A1',
-      title: 'Test Topic',
+      req: {
+        module_id: 'module-id',
+        key: 'A1',
+        title: 'Test Topic',
+      },
     })
     expect(result.ok).toBe(true)
   })
@@ -128,7 +130,7 @@ describe('api service', () => {
   it('importRoadmap calls import_roadmap command', async () => {
     mockInvoke.mockResolvedValue({ ok: true, track_count: 5, topic_count: 44, week_count: 26, warnings: [], error: undefined })
     const result = await api.importRoadmap('# Track content')
-    expect(mockInvoke).toHaveBeenCalledWith('import_roadmap', { content: '# Track content' })
+    expect(mockInvoke).toHaveBeenCalledWith('import_roadmap', { req: { content: '# Track content' } })
     expect(result.ok).toBe(true)
     expect(result.track_count).toBe(5)
   })

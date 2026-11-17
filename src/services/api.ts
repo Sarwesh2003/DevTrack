@@ -24,14 +24,27 @@ import {
 declare global {
   interface Window {
     __TAURI__?: {
-      invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>
+      invoke?: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>
+      core?: {
+        invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>
+      }
     }
   }
 }
 
+function getInvoke() {
+  if (typeof window === 'undefined') return null
+  const tauri = window.__TAURI__
+  if (!tauri) return null
+  if (typeof tauri.core?.invoke === 'function') return tauri.core.invoke
+  if (typeof tauri.invoke === 'function') return tauri.invoke
+  return null
+}
+
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  if (typeof window !== 'undefined' && window.__TAURI__?.invoke) {
-    return window.__TAURI__.invoke(cmd, args) as Promise<T>
+  const tauriInvoke = getInvoke()
+  if (tauriInvoke) {
+    return tauriInvoke(cmd, args) as Promise<T>
   }
   // Dev fallback: return sensible defaults so the UI works without Tauri
   switch (cmd) {
@@ -86,9 +99,11 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 export const api = {
   healthCheck: () => invoke<HealthResponse>('health_check'),
   getSettings: () => invoke<SettingsResponse>('get_settings'),
-  saveSettings: (settings: Settings) => invoke<SaveSettingsResponse>('save_settings', { settings }),
-  backupDatabase: (destination: string) => invoke<BackupResponse>('backup_database', { destination }),
-  restoreDatabase: (source: string) => invoke<RestoreResponse>('restore_database', { source }),
+  saveSettings: (settings: Settings) =>
+    invoke<SaveSettingsResponse>('save_settings', { req: { settings } }),
+  backupDatabase: (destination: string) =>
+    invoke<BackupResponse>('backup_database', { req: { destination } }),
+  restoreDatabase: (source: string) => invoke<RestoreResponse>('restore_database', { req: { source } }),
   runMigrations: () => invoke<MigrationsResponse>('run_migrations'),
 
   // Curriculum
@@ -97,13 +112,13 @@ export const api = {
   getTopics: (moduleId: string) => invoke<TopicListResponse>('get_topics', { module_id: moduleId }),
   getTopicDetail: (topicId: string) => invoke<TopicDetailResponse>('get_topic_detail', { topic_id: topicId }),
   upsertTopic: (req: UpsertTopicRequest) =>
-    invoke<UpsertResponse>('upsert_topic', req as unknown as Record<string, unknown>),
+    invoke<UpsertResponse>('upsert_topic', { req }),
   upsertSubtopic: (req: UpsertSubtopicRequest) =>
-    invoke<UpsertResponse>('upsert_subtopic', req as unknown as Record<string, unknown>),
+    invoke<UpsertResponse>('upsert_subtopic', { req }),
   upsertResource: (req: UpsertResourceRequest) =>
-    invoke<UpsertResponse>('upsert_resource', req as unknown as Record<string, unknown>),
+    invoke<UpsertResponse>('upsert_resource', { req }),
   upsertDependency: (req: UpsertDependencyRequest) =>
-    invoke<UpsertResponse>('upsert_dependency', req as unknown as Record<string, unknown>),
+    invoke<UpsertResponse>('upsert_dependency', { req }),
 
   // Roadmap
   getRoadmapPhases: () => invoke<RoadmapPhasesResponse>('get_roadmap_phases'),
@@ -112,5 +127,5 @@ export const api = {
   getWeeklyPlanItems: (weekId: string) =>
     invoke<WeeklyPlanItemsResponse>('get_weekly_plan_items', { week_id: weekId }),
   importRoadmap: (content: string) =>
-    invoke<ImportRoadmapResponse>('import_roadmap', { content }),
+    invoke<ImportRoadmapResponse>('import_roadmap', { req: { content } }),
 }

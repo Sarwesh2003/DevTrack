@@ -73,231 +73,300 @@ struct ParsedDependency {
   r#type: String,
 }
 
-fn parse_field(lines: &[&str], field_name: &str) -> Option<String> {
-  for line in lines {
-    let trimmed = line.trim();
-    if trimmed.starts_with("| ") && trimmed.contains(field_name) {
-      // Table row: | Field | Value |
-      let parts: Vec<&str> = trimmed.split('|').map(|s| s.trim()).collect();
-      if let Some(idx) = parts.iter().position(|p| *p == field_name) {
-        if idx + 1 < parts.len() {
-          return Some(parts[idx + 1].to_string());
-        }
-      }
-    }
-  }
-  None
+const FIELD_LABELS: [&str; 8] = [
+  "Priority",
+  "Time estimate",
+  "Topics",
+  "Subtopics",
+  "Learning resources",
+  "Practical work",
+  "Completion criteria",
+  "Dependencies",
+];
+
+fn is_separator_line(trimmed: &str) -> bool {
+  !trimmed.is_empty() && trimmed.chars().all(|c| c == '-' || c == ' ' || c == '=')
 }
 
-fn parse_list_items(lines: &[&str], list_header: &str) -> Vec<String> {
-  let mut items = Vec::new();
-  let mut in_list = false;
+fn parse_label_fields<'a>(lines: &[&'a str]) -> std::collections::HashMap<String, String> {
+  let mut fields: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+  let mut current: Option<String> = None;
+
   for line in lines {
     let trimmed = line.trim();
-    if trimmed == list_header || trimmed.starts_with(&format!("| {list_header} |")) {
-      in_list = true;
+    if trimmed.is_empty() || is_separator_line(trimmed) {
       continue;
     }
-    if in_list {
-      if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-        items.push(trimmed[2..].trim().to_string());
-      } else if trimmed.starts_with("|") || trimmed.is_empty() || trimmed.starts_with("#") {
-        // End of list or new section
-        if !trimmed.starts_with("- ") && !trimmed.starts_with("* ") {
-          in_list = false;
+    if trimmed.starts_with("Field") {
+      current = None;
+      continue;
+    }
+
+    let mut matched: Option<(String, String)> = None;
+    for label in FIELD_LABELS.iter() {
+      if let Some(rest) = trimmed.strip_prefix(label) {
+        if rest.is_empty() || rest.starts_with(char::is_whitespace) {
+          matched = Some((label.to_string(), rest.trim().to_string()));
+          break;
+        }
+      }
+    }
+
+    match matched {
+      Some((label, value)) => {
+        current = Some(label.clone());
+        fields.insert(label, value);
+      }
+      None => {
+        if let Some(ref label) = current {
+          if let Some(entry) = fields.get_mut(label) {
+            if !entry.is_empty() {
+              entry.push(' ');
+            }
+            entry.push_str(trimmed);
+          }
         }
       }
     }
   }
-  items
+
+  fields
 }
 
-fn parse_subtopics(lines: &[&str]) -> Vec<ParsedSubtopic> {
-  let mut subtopics = Vec::new();
-  let mut in_subtopics = false;
-  let mut position = 0;
+fn split_semicolon_list(value: &str) -> Vec<String> {
+  value
+    .split(';')
+    .map(|s| s.trim().replace('`', "").trim().to_string())
+    .filter(|s| !s.is_empty())
+    .collect()
+}
 
-  for line in lines {
-    let trimmed = line.trim();
-    if trimmed == "Subtopics" || trimmed == "`Subtopics`" {
-      in_subtopics = true;
-      continue;
-    }
-    if in_subtopics {
-      if trimmed.starts_with("`") && trimmed.contains("`") {
-        // Extract code-formatted subtopic like `==` vs `equals`
-        let backtick_content: Vec<&str> = trimmed.split('`').filter(|s| !s.is_empty()).collect();
-        if !backtick_content.is_empty() {
-          position += 1;
-          subtopics.push(ParsedSubtopic {
-            key: backtick_content[0].replace(' ', "_").to_lowercase(),
-            title: trimmed.trim_matches('`').trim().to_string(),
-            position,
-          });
-        }
-      } else if trimmed.starts_with("- ") {
-        position += 1;
-        subtopics.push(ParsedSubtopic {
-          key: trimmed[2..].trim().replace(' ', "_").to_lowercase(),
-          title: trimmed[2..].trim().to_string(),
-          position,
-        });
-      } else if trimmed.starts_with("|") || trimmed.starts_with("#") || trimmed.is_empty() {
-        if !trimmed.starts_with("- ") && !trimmed.starts_with("`") {
-          in_subtopics = false;
+fn extract_markdown_links(value: &str) -> Vec<(String, String)> {
+  let chars: Vec<char> = value.chars().collect();
+  let mut links = Vec::new();
+  let mut i = 0;
+  while i < chars.len() {
+    if chars[i] == '[' {
+      if let Some(close_bracket) = chars[i + 1..].iter().position(|&c| c == ']') {
+        let title_end = i + 1 + close_bracket;
+        let title: String = chars[i + 1..title_end].iter().collect();
+        if title_end + 1 < chars.len() && chars[title_end + 1] == '(' {
+          if let Some(close_paren) = chars[title_end + 2..].iter().position(|&c| c == ')') {
+            let url_end = title_end + 2 + close_paren;
+            let url: String = chars[title_end + 2..url_end].iter().collect();
+            links.push((title.trim().to_string(), url.trim().to_string()));
+            i = url_end + 1;
+            continue;
+          }
         }
       }
     }
+    i += 1;
   }
-  subtopics
+  links
+}
+
+fn parse_estimate_minutes(value: &str) -> Option<i32> {
+  let first_num: String = value
+    .chars()
+    .skip_while(|c| !c.is_ascii_digit())
+    .take_while(|c| c.is_ascii_digit())
+    .collect();
+  let num: i32 = first_num.parse().ok()?;
+  if value.to_lowercase().contains("min") {
+    Some(num)
+  } else {
+    Some(num * 60)
+  }
+}
+
+fn parse_dependencies(value: &str) -> Vec<ParsedDependency> {
+  let trimmed = value.trim();
+  if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("none") {
+    return vec![];
+  }
+  trimmed
+    .split(|c| c == ',' || c == ';')
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("none"))
+    .map(|s| ParsedDependency {
+      depends_on_topic_key: s
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_uppercase(),
+      r#type: "prerequisite".to_string(),
+    })
+    .collect()
+}
+
+fn parse_track_header(line: &str) -> Option<(String, String)> {
+  let trimmed = line.trim();
+  let without = trimmed.strip_prefix("# ")?;
+  let parts: Vec<&str> = without.splitn(2, " --- ").collect();
+  if parts.len() != 2 {
+    return None;
+  }
+  let left = parts[0].trim();
+  let name = parts[1].trim().to_string();
+  let idx = left.find("Track ")?;
+  let key_part = left[idx + "Track ".len()..].trim();
+  let mut chars = key_part.chars();
+  let first = chars.next()?;
+  if !first.is_ascii_uppercase() || chars.next().is_some() {
+    return None;
+  }
+  Some((first.to_ascii_lowercase().to_string(), name))
+}
+
+fn parse_topic_header(line: &str) -> Option<(String, String)> {
+  let trimmed = line.trim();
+  let rest = trimmed.strip_prefix("### ")?;
+  let dot = rest.find(". ")?;
+  let key_part = rest[..dot].trim();
+  let title = rest[dot + 2..].trim().to_string();
+  let mut chars = key_part.chars();
+  let first = chars.next()?;
+  if !first.is_ascii_uppercase() {
+    return None;
+  }
+  if key_part.len() < 2 || !chars.all(|c| c.is_ascii_digit()) {
+    return None;
+  }
+  Some((key_part.to_string(), title))
 }
 
 fn parse_roadmap(content: &str) -> Result<(Vec<ParsedTrack>, Vec<ParsedModule>, Vec<ParsedTopic>), String> {
+  let lines: Vec<&str> = content.lines().collect();
+
+  let mut track_headers: Vec<(usize, String, String)> = Vec::new();
+  for (i, line) in lines.iter().enumerate() {
+    if let Some((key, name)) = parse_track_header(line) {
+      track_headers.push((i, key, name));
+    }
+  }
+
+  if track_headers.is_empty() {
+    return Err(
+      "No track headers found. Expected headings like '# 3. Track A --- Java Interview Preparation'."
+        .to_string(),
+    );
+  }
+
   let mut tracks = Vec::new();
   let mut modules = Vec::new();
   let mut topics = Vec::new();
   let mut track_position = 0;
 
-  // Split by track headers
-  let track_sections: Vec<&str> = content.split("# Track ").collect();
-  
-  for (ti, section) in track_sections.iter().enumerate() {
-    if ti == 0 { continue; } // Skip content before first track
+  for (ti, (start, track_key, track_name)) in track_headers.iter().enumerate() {
+    let end = track_headers.get(ti + 1).map(|h| h.0).unwrap_or(lines.len());
+    let section = &lines[start + 1..end];
 
-    let lines: Vec<&str> = section.lines().collect();
-    if lines.is_empty() { continue; }
-
-    // First line is the track header: "A --- Java Interview Preparation (Senior SDE)"
-    let header_line = lines[0].trim();
-    let track_parts: Vec<&str> = header_line.splitn(2, " --- ").collect();
-    if track_parts.len() < 2 {
-      continue;
-    }
-    let track_key = track_parts[0].trim().to_lowercase();
-    let track_name = track_parts[1].trim().to_string();
     track_position += 1;
-
     tracks.push(ParsedTrack {
       key: track_key.clone(),
-      name: track_name,
+      name: track_name.clone(),
       position: track_position,
     });
 
-    // Parse modules and topics within this track
+    // DSA (track b) problems are imported from the NeetCode 250 dataset, not this document.
+    if track_key.eq_ignore_ascii_case("b") {
+      continue;
+    }
+
     let mut module_position = 0;
-    let mut current_module_key: Option<String> = None;
+    let mut current_module: Option<String> = None;
 
-    // Split by topic headers (### A1. Name)
-    let topic_sections: Vec<&str> = section.split("### ").collect();
-    
-    for (si, topic_section) in topic_sections.iter().enumerate() {
-      if si == 0 { continue; }
-      
-      let topic_lines: Vec<&str> = topic_section.lines().collect();
-      if topic_lines.is_empty() { continue; }
-
-      // First line is the topic header: "A1. Language, object model and type system"
-      let topic_header = topic_lines[0].trim();
-      let topic_parts: Vec<&str> = topic_header.splitn(2, ". ").collect();
-      if topic_parts.len() < 2 {
+    let mut idx = 0;
+    while idx < section.len() {
+      if !section[idx].trim().starts_with("### ") {
+        idx += 1;
         continue;
       }
-      let topic_key_part = topic_parts[0].trim();
-      let topic_title = topic_parts[1].trim().to_string();
-      
-      // Determine module key (e.g., "A" from "A1")
-      let module_key = topic_key_part.chars().take_while(|c| c.is_alphabetic()).collect::<String>();
-      
-      // Create module if new
-      if current_module_key.as_ref() != Some(&module_key) {
-        module_position += 1;
-        current_module_key = Some(module_key.clone());
-        modules.push(ParsedModule {
-          track_key: track_key.clone(),
-          key: module_key.clone(),
-          name: format!("Module {}", module_key),
-          position: module_position,
+
+      let mut next = idx + 1;
+      while next < section.len() && !section[next].trim().starts_with("### ") {
+        next += 1;
+      }
+      let block = &section[idx + 1..next];
+
+      if let Some((topic_key, topic_title)) = parse_topic_header(section[idx]) {
+        let fields = parse_label_fields(block);
+        let module_key: String = topic_key
+          .chars()
+          .take_while(|c| c.is_ascii_alphabetic())
+          .collect();
+
+        if current_module.as_ref() != Some(&module_key) {
+          module_position += 1;
+          current_module = Some(module_key.clone());
+          modules.push(ParsedModule {
+            track_key: track_key.clone(),
+            key: module_key.clone(),
+            name: format!("Module {module_key}"),
+            position: module_position,
+          });
+        }
+
+        let priority = fields
+          .get("Priority")
+          .cloned()
+          .unwrap_or_else(|| "Medium".to_string());
+        let estimate_minutes = fields.get("Time estimate").and_then(|s| parse_estimate_minutes(s));
+        let completion_criteria = fields.get("Completion criteria").cloned();
+
+        let resources: Vec<ParsedResource> = fields
+          .get("Learning resources")
+          .map(|v| extract_markdown_links(v))
+          .unwrap_or_default()
+          .into_iter()
+          .enumerate()
+          .map(|(i, (title, url))| ParsedResource {
+            title,
+            url: Some(url),
+            r#type: Some("link".to_string()),
+            position: i as i32,
+          })
+          .collect();
+
+        let subtopics: Vec<ParsedSubtopic> = fields
+          .get("Subtopics")
+          .map(|v| split_semicolon_list(v))
+          .unwrap_or_default()
+          .into_iter()
+          .enumerate()
+          .map(|(i, title)| ParsedSubtopic {
+            key: format!("sub{i}"),
+            title,
+            position: i as i32,
+          })
+          .collect();
+
+        let dependencies = fields
+          .get("Dependencies")
+          .map(|v| parse_dependencies(v))
+          .unwrap_or_default();
+
+        topics.push(ParsedTopic {
+          module_key: module_key.clone(),
+          key: topic_key.to_uppercase(),
+          title: topic_title,
+          status: "Not started".to_string(),
+          priority,
+          estimate_minutes,
+          confidence: None,
+          completion_criteria,
+          notes: None,
+          target_week: None,
+          is_custom: false,
+          source_ref: Some(format!("roadmap:{track_key}:{}", topic_key.to_uppercase())),
+          subtopics,
+          resources,
+          dependencies,
         });
       }
 
-      let topic_key = topic_key_part.to_uppercase();
-      
-      // Parse fields from the topic section
-      let status = "Not started".to_string();
-      let priority = parse_field(&topic_lines, "Priority")
-        .unwrap_or_else(|| "Medium".to_string());
-      
-      let estimate_str = parse_field(&topic_lines, "Time estimate");
-      let estimate_minutes = estimate_str.and_then(|s| {
-        // Extract number from "3 hours" or "5--7 h"
-        let num_str: String = s.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
-        num_str.parse::<f64>().ok().map(|f| (f * 60.0) as i32)
-      });
-
-      let completion_criteria = parse_field(&topic_lines, "Completion criteria");
-      let dependencies_str = parse_field(&topic_lines, "Dependencies");
-      
-      let dependencies: Vec<ParsedDependency> = if let Some(deps) = &dependencies_str {
-        if deps == "None" {
-          vec![]
-        } else {
-          deps.split(',').map(|d| {
-            let dep_key = d.trim().to_uppercase();
-            ParsedDependency {
-              depends_on_topic_key: dep_key,
-              r#type: "prerequisite".to_string(),
-            }
-          }).collect()
-        }
-      } else {
-        vec![]
-      };
-
-      let subtopics = parse_subtopics(&topic_lines);
-      let resources_str = parse_field(&topic_lines, "Learning resources");
-      
-      let resources: Vec<ParsedResource> = if let Some(res) = &resources_str {
-        res.lines().enumerate().filter_map(|(i, line)| {
-          let trimmed = line.trim();
-          if trimmed.starts_with("[") && trimmed.contains("](") {
-            // Markdown link: [Title](URL)
-            let start = trimmed.find('[').unwrap_or(0) + 1;
-            let end = trimmed.find(']').unwrap_or(start);
-            let title = trimmed[start..end].to_string();
-            let url_start = trimmed.find('(').unwrap_or(end) + 1;
-            let url_end = trimmed.find(')').unwrap_or(url_start);
-            let url = trimmed[url_start..url_end].to_string();
-            Some(ParsedResource {
-              title,
-              url: Some(url),
-              r#type: Some("link".to_string()),
-              position: i as i32,
-            })
-          } else {
-            None
-          }
-        }).collect()
-      } else {
-        vec![]
-      };
-
-      topics.push(ParsedTopic {
-        module_key: module_key.clone(),
-        key: topic_key.clone(),
-        title: topic_title,
-        status,
-        priority,
-        estimate_minutes,
-        confidence: None,
-        completion_criteria,
-        notes: None,
-        target_week: None,
-        is_custom: false,
-        source_ref: Some(format!("roadmap:{track_key}:{topic_key}")),
-        subtopics,
-        resources,
-        dependencies,
-      });
+      idx = next;
     }
   }
 
@@ -385,7 +454,7 @@ fn insert_topic(conn: &rusqlite::Connection, topic: &ParsedTopic) -> DbResult<St
 
   let _ = is_previously_covered; // Stored in problems table for DSA, topics use status
 
-  conn.execute(
+  let inserted = conn.execute(
     "INSERT OR IGNORE INTO topics (id, module_id, key, title, status, priority, estimate_minutes, confidence, completion_criteria, notes, target_week, is_custom, source_ref, created_at, updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)",
     params![
       id, module_id, topic.key, topic.title, status,
@@ -396,6 +465,16 @@ fn insert_topic(conn: &rusqlite::Connection, topic: &ParsedTopic) -> DbResult<St
       now, now,
     ],
   )?;
+
+  if inserted == 0 {
+    // Topic already exists (re-import): keep existing rows and user progress untouched.
+    let existing_id: String = conn.query_row(
+      "SELECT id FROM topics WHERE key = ?1",
+      params![topic.key],
+      |row| row.get(0),
+    )?;
+    return Ok(existing_id);
+  }
 
   // Insert subtopics
   for (i, subtopic) in topic.subtopics.iter().enumerate() {
@@ -485,6 +564,13 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
 
   let mut warnings = Vec::new();
 
+  if tracks.iter().any(|t| t.key.eq_ignore_ascii_case("b")) {
+    warnings.push(
+      "DSA (track B) problems are imported from the NeetCode 250 dataset in a later phase; the roadmap contributes guidance only, so track B has no problem topics yet."
+        .to_string(),
+    );
+  }
+
   // Run migrations first
   if let Err(e) = crate::migrations::ensure_schema(&mut conn) {
     warnings.push(format!("Migration warning: {e}"));
@@ -551,5 +637,53 @@ pub async fn import_roadmap(req: ImportRoadmapRequest) -> ImportRoadmapResponse 
     week_count: week_count as i32,
     warnings,
     error: None,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  const ROADMAP: &str = include_str!("../../docs/roadmap/six_month_engineering_roadmap.md");
+
+  #[test]
+  fn parses_track_headers() {
+    assert_eq!(
+      parse_track_header("# 3. Track A --- Java Interview Preparation (Senior SDE)"),
+      Some(("a".to_string(), "Java Interview Preparation (Senior SDE)".to_string()))
+    );
+    assert_eq!(parse_track_header("# 8. Cross-track dependency map"), None);
+  }
+
+  #[test]
+  fn parses_topic_headers() {
+    assert_eq!(
+      parse_topic_header("### A1. Language, object model and type system"),
+      Some(("A1".to_string(), "Language, object model and type system".to_string()))
+    );
+    assert_eq!(parse_topic_header("### Java track completion standard"), None);
+    assert_eq!(parse_topic_header("### Completion states"), None);
+  }
+
+  #[test]
+  fn parses_real_roadmap() {
+    let (tracks, modules, topics) = parse_roadmap(ROADMAP).expect("roadmap should parse");
+
+    assert_eq!(tracks.len(), 5, "expected 5 tracks");
+    let keys: Vec<&str> = tracks.iter().map(|t| t.key.as_str()).collect();
+    assert_eq!(keys, vec!["a", "b", "c", "d", "e"]);
+
+    // Track B is guidance only; real DSA problems come from NeetCode.
+    assert_eq!(topics.len(), 37, "A(10) + C(7) + D(10) + E(10)");
+    assert!(topics.iter().all(|t| !t.key.starts_with('B')));
+
+    let a1 = topics.iter().find(|t| t.key == "A1").expect("A1 present");
+    assert_eq!(a1.title, "Language, object model and type system");
+    assert_eq!(a1.priority, "High");
+    assert!(!a1.subtopics.is_empty(), "A1 should have subtopics");
+    assert!(!a1.resources.is_empty(), "A1 should have resources");
+
+    let c1 = topics.iter().find(|t| t.key == "C1").expect("C1 present");
+    assert!(c1.module_key == "C");
   }
 }

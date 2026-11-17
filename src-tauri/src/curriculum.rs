@@ -177,7 +177,7 @@ pub async fn get_tracks() -> TrackListResponse {
   TrackListResponse { ok: true, tracks }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_modules(track_key: String) -> ModuleListResponse {
   let conn = match open_connection() {
     Ok(c) => c,
@@ -211,7 +211,7 @@ pub async fn get_modules(track_key: String) -> ModuleListResponse {
   ModuleListResponse { ok: true, modules }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_topics(module_id: String) -> TopicListResponse {
   let conn = match open_connection() {
     Ok(c) => c,
@@ -256,7 +256,7 @@ pub async fn get_topics(module_id: String) -> TopicListResponse {
   TopicListResponse { ok: true, topics }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_topic_detail(topic_id: String) -> TopicDetailResponse {
   let conn = match open_connection() {
     Ok(c) => c,

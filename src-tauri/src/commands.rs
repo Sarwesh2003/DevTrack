@@ -80,7 +80,8 @@ pub async fn get_settings() -> SettingsResponse {
 }
 
 #[tauri::command]
-pub async fn save_settings(_req: SaveSettingsRequest) -> SaveSettingsResponse {
+pub async fn save_settings(req: SaveSettingsRequest) -> SaveSettingsResponse {
+  let _ = req;
   SaveSettingsResponse { ok: true }
 }
 
@@ -228,7 +229,7 @@ pub async fn get_roadmap_phases() -> RoadmapPhasesResponse {
   RoadmapPhasesResponse { ok: true, phases }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_roadmap_weeks(phase_key: Option<String>) -> RoadmapWeeksResponse {
   let conn = match open_connection() {
     Ok(c) => c,
@@ -285,7 +286,7 @@ pub async fn get_roadmap_weeks(phase_key: Option<String>) -> RoadmapWeeksRespons
   RoadmapWeeksResponse { ok: true, weeks }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_weekly_plan_items(week_id: String) -> WeeklyPlanItemsResponse {
   let conn = match open_connection() {
     Ok(c) => c,
