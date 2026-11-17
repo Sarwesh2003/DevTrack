@@ -46,10 +46,24 @@
 - `docs/decisions/ADR-001-local-first-architecture.md`
 - `docs/PHASE_0_REPORT.md`
 
+## Phase 1 deliverables (complete)
+- `src-tauri/` — Tauri 2 Rust backend with SQLite, migrations, settings, backup/restore
+- `src/` — React + TypeScript + Vite frontend with Dashboard and Settings pages
+- `docs/PHASE_1_REPORT.md`
+
+## Phase 2 deliverables (complete)
+- `src-tauri/src/curriculum.rs` — curriculum CRUD commands (tracks, modules, topics, subtopics, resources, dependencies)
+- `src-tauri/src/roadmap_import.rs` — deterministic Markdown roadmap import with progress overrides
+- `src-tauri/src/commands.rs` — roadmap phase/week/plan-item commands
+- `src/features/roadmap/Roadmap.tsx` — roadmap page with track list
+- `src/types/index.ts` — curriculum, roadmap types
+- `src/services/api.ts` — API service for new commands
+- `docs/PHASE_2_REPORT.md`
+
 ## Roadmap source (present)
 - `docs/roadmap/six_month_engineering_roadmap.md` — complete 26-week roadmap imported and validated as a planning reference.
 - `docs/roadmap/CURRENT_PROGRESS.yaml` — per-track progress checkpoints (DSA through Trees, LLD through Composite).
-- `/Users/sarwesh/Downloads/NEETCODE_250.csv` — official NeetCode 250 dataset (250 problems, validated). Import into SQLite deferred to Phase 2/4.
+- `/Users/sarwesh/Downloads/NEETCODE_250.csv` — official NeetCode 250 dataset (250 problems, validated). Import into SQLite deferred to Phase 4.
 
 ## Git and delivery
 - Remote: https://github.com/Sarwesh2003/DevTrack.git (master branch).

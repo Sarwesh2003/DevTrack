@@ -1,5 +1,6 @@
 use crate::db::{check_db_health, get_default_settings, open_connection, resolve_db_path, Settings};
 use crate::migrations::SCHEMA_VERSION;
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
@@ -143,3 +144,181 @@ pub async fn run_migrations(_app: AppHandle) -> MigrationsResponse {
     Err(e) => MigrationsResponse { ok: false, version: 0, error: Some(e.to_string()) },
   }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoadmapPhase {
+  pub id: String,
+  pub key: String,
+  pub name: String,
+  pub position: i32,
+  pub source_ref: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoadmapWeek {
+  pub id: String,
+  pub phase_id: Option<String>,
+  pub week_number: i32,
+  pub track_allocations: Option<String>,
+  pub total_estimate_minutes: Option<i32>,
+  pub source_ref: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WeeklyPlanItem {
+  pub id: String,
+  pub week_id: String,
+  pub topic_id: Option<String>,
+  pub problem_id: Option<String>,
+  pub task_type: String,
+  pub title: String,
+  pub estimate_minutes: i32,
+  pub position: i32,
+  pub day_of_week: Option<i32>,
+  pub source_ref: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoadmapPhasesResponse {
+  pub ok: bool,
+  pub phases: Vec<RoadmapPhase>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoadmapWeeksResponse {
+  pub ok: bool,
+  pub weeks: Vec<RoadmapWeek>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WeeklyPlanItemsResponse {
+  pub ok: bool,
+  pub items: Vec<WeeklyPlanItem>,
+}
+
+#[tauri::command]
+pub async fn get_roadmap_phases() -> RoadmapPhasesResponse {
+  let conn = match open_connection() {
+    Ok(c) => c,
+    Err(_) => return RoadmapPhasesResponse { ok: false, phases: vec![] },
+  };
+
+  let mut stmt = match conn.prepare("SELECT id, key, name, position, source_ref FROM roadmap_phases ORDER BY position") {
+    Ok(s) => s,
+    Err(_) => return RoadmapPhasesResponse { ok: false, phases: vec![] },
+  };
+
+  let rows = match stmt.query_map([], |row| {
+    Ok(RoadmapPhase {
+      id: row.get(0)?,
+      key: row.get(1)?,
+      name: row.get(2)?,
+      position: row.get(3)?,
+      source_ref: row.get(4)?,
+    })
+  }) {
+    Ok(r) => r,
+    Err(_) => return RoadmapPhasesResponse { ok: false, phases: vec![] },
+  };
+
+  let mut phases = Vec::new();
+  for row in rows.flatten() {
+    phases.push(row);
+  }
+  RoadmapPhasesResponse { ok: true, phases }
+}
+
+#[tauri::command]
+pub async fn get_roadmap_weeks(phase_key: Option<String>) -> RoadmapWeeksResponse {
+  let conn = match open_connection() {
+    Ok(c) => c,
+    Err(_) => return RoadmapWeeksResponse { ok: false, weeks: vec![] },
+  };
+
+  let weeks: Vec<RoadmapWeek> = match phase_key {
+    Some(key) => {
+      let mut stmt = match conn.prepare("SELECT w.id, w.phase_id, w.week_number, w.track_allocations, w.total_estimate_minutes, w.source_ref FROM roadmap_weeks w JOIN roadmap_phases p ON w.phase_id = p.id WHERE p.key = ?1 ORDER BY w.week_number") {
+        Ok(s) => s,
+        Err(_) => return RoadmapWeeksResponse { ok: false, weeks: vec![] },
+      };
+      let rows = match stmt.query_map(params![key], |row| {
+        Ok(RoadmapWeek {
+          id: row.get(0)?,
+          phase_id: row.get(1)?,
+          week_number: row.get(2)?,
+          track_allocations: row.get(3)?,
+          total_estimate_minutes: row.get(4)?,
+          source_ref: row.get(5)?,
+        })
+      }) {
+        Ok(r) => r,
+        Err(_) => return RoadmapWeeksResponse { ok: false, weeks: vec![] },
+      };
+      let mut v = Vec::new();
+      for row in rows.flatten() { v.push(row); }
+      v
+    }
+    None => {
+      let mut stmt = match conn.prepare("SELECT id, phase_id, week_number, track_allocations, total_estimate_minutes, source_ref FROM roadmap_weeks ORDER BY week_number") {
+        Ok(s) => s,
+        Err(_) => return RoadmapWeeksResponse { ok: false, weeks: vec![] },
+      };
+      let rows = match stmt.query_map([], |row| {
+        Ok(RoadmapWeek {
+          id: row.get(0)?,
+          phase_id: row.get(1)?,
+          week_number: row.get(2)?,
+          track_allocations: row.get(3)?,
+          total_estimate_minutes: row.get(4)?,
+          source_ref: row.get(5)?,
+        })
+      }) {
+        Ok(r) => r,
+        Err(_) => return RoadmapWeeksResponse { ok: false, weeks: vec![] },
+      };
+      let mut v = Vec::new();
+      for row in rows.flatten() { v.push(row); }
+      v
+    }
+  };
+
+  RoadmapWeeksResponse { ok: true, weeks }
+}
+
+#[tauri::command]
+pub async fn get_weekly_plan_items(week_id: String) -> WeeklyPlanItemsResponse {
+  let conn = match open_connection() {
+    Ok(c) => c,
+    Err(_) => return WeeklyPlanItemsResponse { ok: false, items: vec![] },
+  };
+
+  let mut stmt = match conn.prepare("SELECT id, week_id, topic_id, problem_id, task_type, title, estimate_minutes, position, day_of_week, source_ref FROM weekly_plan_items WHERE week_id = ?1 ORDER BY position") {
+    Ok(s) => s,
+    Err(_) => return WeeklyPlanItemsResponse { ok: false, items: vec![] },
+  };
+
+  let rows = match stmt.query_map(params![week_id], |row| {
+    Ok(WeeklyPlanItem {
+      id: row.get(0)?,
+      week_id: row.get(1)?,
+      topic_id: row.get(2)?,
+      problem_id: row.get(3)?,
+      task_type: row.get(4)?,
+      title: row.get(5)?,
+      estimate_minutes: row.get(6)?,
+      position: row.get(7)?,
+      day_of_week: row.get(8)?,
+      source_ref: row.get(9)?,
+    })
+  }) {
+    Ok(r) => r,
+    Err(_) => return WeeklyPlanItemsResponse { ok: false, items: vec![] },
+  };
+
+  let mut items = Vec::new();
+  for row in rows.flatten() {
+    items.push(row);
+  }
+  WeeklyPlanItemsResponse { ok: true, items }
+}
+

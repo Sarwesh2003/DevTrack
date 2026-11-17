@@ -57,23 +57,13 @@ DevTrack/
 
 ## Development phases
 
-Implemented one approved phase at a time from `docs/IMPLEMENTATION_PLAN.md`:
-
-0. Repository discovery, environment check, architecture and product documentation (Phase 0 — current)
-1. Desktop shell, SQLite, local file storage, settings and backup foundation
-2. Curriculum data model and 26-week roadmap import
-3. Daily planner, weekly goals, custom learning entries, rescheduling and activity tracking
-4. NeetCode 250 workspace, attempt/code/notes storage and revision engine
-5. Core Java, LLD and HLD workspaces
-6. FDE learning workspace and project portfolio
-7. Analytics, global search, backup/export polish and QA
-8. Optional GitHub/LeetCode integrations
+## Development phases
 
 Implemented one approved phase at a time from `docs/IMPLEMENTATION_PLAN.md`:
 
 0. Repository discovery, environment check, architecture and product documentation (Phase 0 — complete)
 1. Desktop shell, SQLite, local file storage, settings and backup foundation (Phase 1 — complete)
-2. Curriculum data model and 26-week roadmap import
+2. Curriculum data model and 26-week roadmap import (Phase 2 — complete)
 3. Daily planner, weekly goals, custom learning entries, rescheduling and activity tracking
 4. NeetCode 250 workspace, attempt/code/notes storage and revision engine
 5. Core Java, LLD and HLD workspaces
@@ -85,7 +75,7 @@ Implemented one approved phase at a time from `docs/IMPLEMENTATION_PLAN.md`:
 
 Prerequisites (Mac): Node.js, npm or pnpm, Rust toolchain, Xcode command-line tools.
 
-### Phase 1 (complete)
+### Phase 2 (complete)
 
 1. Frontend: `npm install && npm run dev` (dev) or `npm run build` (production)
 2. Typecheck: `npx tsc --noEmit`
@@ -95,8 +85,7 @@ Prerequisites (Mac): Node.js, npm or pnpm, Rust toolchain, Xcode command-line to
 
 ### Next step
 
-3. Supply the official NeetCode 250 dataset (CSV/JSON) when ready for the DSA import.
-4. Proceed to Phase 2 (curriculum data model and roadmap import) after Phase 1 approval.
+Proceed to Phase 3 (daily planner, weekly goals, custom learning entries, rescheduling and activity tracking) after Phase 2 approval.
 
 ## Rules (see AGENTS.md)
 
