@@ -157,6 +157,12 @@ describe('api service', () => {
     })
   })
 
+  it('undoing a task sends planned with cleared actual minutes', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, task: null })
+    await api.updateStudyTask({ id: 'task-2', status: 'planned', actual_minutes: undefined, output: undefined })
+    expect(mockInvoke).toHaveBeenCalledWith('update_study_task', expect.objectContaining({ req: { id: 'task-2', status: 'planned' } }))
+  })
+
   it('replanBacklog sends today', async () => {
     mockInvoke.mockResolvedValue({ ok: true, moved: 2, unplaced: 0 })
     await api.replanBacklog('2026-01-08')

@@ -830,6 +830,8 @@ pub async fn update_study_task(req: UpdateTaskRequest) -> UpdateTaskResponse {
     }
   };
 
+  let was_done = task.status == "done";
+
   if let Some(status) = &req.status {
     task.status = status.clone();
   }
@@ -852,11 +854,8 @@ pub async fn update_study_task(req: UpdateTaskRequest) -> UpdateTaskResponse {
       .ok();
   }
 
-  let completed_at = if task.status == "done" {
-    Some(now_rfc3339())
-  } else {
-    None
-  };
+  let new_done = task.status == "done";
+  let completed_at = if new_done { Some(now_rfc3339()) } else { None };
 
   if let Err(e) = conn.execute(
     "UPDATE study_tasks SET status = ?1, actual_minutes = ?2, output = ?3, completed_at = ?4, scheduled_date = ?5, daily_plan_id = ?6 WHERE id = ?7",
@@ -878,7 +877,7 @@ pub async fn update_study_task(req: UpdateTaskRequest) -> UpdateTaskResponse {
   }
   task.completed_at = completed_at;
 
-  if task.status == "done" {
+  if new_done {
     let minutes = task.actual_minutes.unwrap_or(task.estimate_minutes);
     let _ = conn.execute(
       "INSERT INTO activity_events (id, event_date, event_type, source_id, minutes, created_at) VALUES (?1,?2,'task_done',?3,?4,?5)",
@@ -890,6 +889,28 @@ pub async fn update_study_task(req: UpdateTaskRequest) -> UpdateTaskResponse {
         "UPDATE topics SET status = 'Learning', updated_at = ?1 WHERE id = ?2 AND status = 'Not started'",
         params![now_rfc3339(), topic_id],
       );
+    }
+  } else if was_done {
+    // Undo: drop the completion event and release the topic back to Not started
+    // unless another task for it is still done.
+    let _ = conn.execute(
+      "DELETE FROM activity_events WHERE source_id = ?1 AND event_type = 'task_done'",
+      params![task.id],
+    );
+    if let Some(topic_id) = &task.topic_id {
+      let remaining_done: i32 = conn
+        .query_row(
+          "SELECT COUNT(*) FROM study_tasks WHERE topic_id = ?1 AND status = 'done' AND id != ?2",
+          params![topic_id, task.id],
+          |r| r.get::<_, i32>(0),
+        )
+        .unwrap_or(0);
+      if remaining_done == 0 {
+        let _ = conn.execute(
+          "UPDATE topics SET status = 'Not started', updated_at = ?1 WHERE id = ?2 AND status = 'Learning'",
+          params![now_rfc3339(), topic_id],
+        );
+      }
     }
   }
 

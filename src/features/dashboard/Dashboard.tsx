@@ -146,6 +146,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
       if (!res.ok) setError(res.error ?? 'Failed to skip task')
     })
 
+  const handleUndo = (task: StudyTask) =>
+    runAction(async () => {
+      const res = await api.updateStudyTask({
+        id: task.id,
+        status: 'planned',
+        actual_minutes: undefined,
+        output: undefined,
+      })
+      if (!res.ok) setError(res.error ?? 'Failed to undo task')
+    })
+
   const handleMove = (task: StudyTask) =>
     runAction(async () => {
       const res = await api.updateStudyTask({
@@ -326,12 +337,26 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
                             Skip
                           </button>
                         </div>
+                      ) : task.status === 'done' ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200"
+                          >
+                            Done
+                          </span>
+                          <button
+                            onClick={() => handleUndo(task)}
+                            disabled={busy}
+                            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                          >
+                            Undo
+                          </button>
+                        </div>
                       ) : (
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                            task.status === 'done'
-                              ? 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200'
-                              : 'bg-muted text-muted-foreground'
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${task.status === 'done'
+                            ? 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200'
+                            : 'bg-muted text-muted-foreground'
                           }`}
                         >
                           {task.status}
