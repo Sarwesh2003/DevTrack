@@ -12,6 +12,14 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
   const [tracks, setTracks] = useState<Track[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [importResult, setImportResult] = useState<{
+    ok: boolean
+    track_count: number
+    topic_count: number
+    week_count: number
+    warnings: string[]
+    error?: string
+  } | null>(null)
   const [expandedTracks, setExpandedTracks] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -31,6 +39,30 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
       else next.add(key)
       return next
     })
+  }
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImportResult(null)
+    setError(null)
+
+    const content = await file.text()
+
+    try {
+      const res = await api.importRoadmap(content)
+      setImportResult(res)
+      if (res.ok) {
+        api.getTracks().then((r) => {
+          if (r.ok) setTracks(r.tracks)
+        })
+      } else {
+        setError(res.error || 'Import failed')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed')
+    }
   }
 
   if (loading) return <div className="p-4">Loading roadmap...</div>
@@ -53,26 +85,65 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
             26-week curriculum across Java, DSA, LLD, HLD and FDE tracks.
           </p>
         </div>
-        <button
-          onClick={() => {
-            api.importRoadmap('')
-              .then((res) => {
-                if (res.ok) {
-                  api.getTracks().then((r) => {
-                    if (r.ok) setTracks(r.tracks)
-                  })
-                } else {
-                  setError(res.error || 'Import failed')
-                }
-              })
-          }}
-          className="text-sm border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
-        >
-          Import Roadmap
-        </button>
+        <div className="flex items-center gap-3">
+          <input
+            type="file"
+            accept=".md"
+            onChange={handleImport}
+            className="text-sm text-muted-foreground"
+          />
+          <button
+            onClick={() => {
+              api.importRoadmap('')
+                .then((res) => {
+                  setImportResult(res)
+                  if (res.ok) {
+                    api.getTracks().then((r) => {
+                      if (r.ok) setTracks(r.tracks)
+                    })
+                  } else {
+                    setError(res.error || 'Import failed')
+                  }
+                })
+            }}
+            className="text-sm border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Import Empty
+          </button>
+        </div>
       </div>
 
-      {error && (
+      {importResult && (
+        <div className={`p-3 rounded-lg text-sm border ${
+          importResult.ok
+            ? 'bg-green-50 border-green-200 text-green-900'
+            : 'bg-red-50 border-red-200 text-red-900'
+        }`}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold">
+              {importResult.ok ? 'Import successful' : 'Import failed'}
+            </span>
+            <span className="text-xs opacity-70">
+              {importResult.track_count} tracks • {importResult.topic_count} topics • {importResult.week_count} weeks
+            </span>
+          </div>
+          {importResult.warnings.length > 0 && (
+            <div className="mt-1">
+              <span className="text-xs opacity-80">Warnings:</span>
+              <ul className="list-disc list-inside text-xs mt-1">
+                {importResult.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {importResult.error && (
+            <p className="mt-1 text-xs">{importResult.error}</p>
+          )}
+        </div>
+      )}
+
+      {error && !importResult && (
         <div className="p-3 rounded-md bg-destructive/10 border border-destructive/50 text-destructive text-sm">
           {error}
         </div>
@@ -99,16 +170,9 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
 
             {expandedTracks.has(track.key) && (
               <div className="px-4 py-3 border-t border-border">
-                {tracks.filter((t) => t.key === track.key).flatMap(() => {
-                  // Modules are loaded separately; this is a placeholder structure
-                  return [
-                    <div key="module-placeholder" className="ml-4 border-l border-border pl-4 my-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Loading modules...</span>
-                      </div>
-                    </div>,
-                  ]
-                })}
+                <div className="text-sm text-muted-foreground">
+                  Modules and topics will render here after import.
+                </div>
               </div>
             )}
           </div>
