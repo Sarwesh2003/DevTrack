@@ -3,8 +3,9 @@ import Shell from '@/components/layout/Shell'
 import Dashboard from '@/features/dashboard/Dashboard'
 import Settings from '@/features/settings/Settings'
 import Roadmap from '@/features/roadmap/Roadmap'
+import Review from '@/features/review/Review'
 
-type Page = 'dashboard' | 'settings' | 'roadmap'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
 type Theme = 'dark' | 'light' | 'system'
 
 export default function App() {
@@ -27,6 +28,8 @@ export default function App() {
         <Dashboard onNavigate={setPage} />
       ) : page === 'settings' ? (
         <Settings onNavigate={setPage} theme={theme} setTheme={setTheme} />
+      ) : page === 'review' ? (
+        <Review onNavigate={setPage} />
       ) : (
         <Roadmap onNavigate={setPage} />
       )}

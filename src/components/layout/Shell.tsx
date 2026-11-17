@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 
-type Page = 'dashboard' | 'settings' | 'roadmap'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
 
 interface ShellProps {
   page: Page

@@ -25,7 +25,7 @@
 - Prefer simple, maintainable solutions; avoid unnecessary services, Docker, cloud infrastructure and framework sprawl.
 
 ## Incremental delivery
-- Implement one approved phase at a time from `docs/IMPLEMENTATION_PLAN.md`.
+- Implement one approved phase at a time from `docs/DEVTRACK_IMPLEMENTATION_PLAN.md`.
 - Do not begin a later phase automatically.
 - Each phase requires tests, typecheck/lint/build verification, updated documentation and a completion report.
 - Add tests for scheduling, revision, import and persistence logic before relying on them in the UI.
@@ -41,7 +41,7 @@
 - `docs/PRODUCT_REQUIREMENTS.md`
 - `docs/ARCHITECTURE.md`
 - `docs/DATABASE_SCHEMA.md`
-- `docs/IMPLEMENTATION_PLAN.md` (pre-existing)
+- `docs/DEVTRACK_IMPLEMENTATION_PLAN.md` (pre-existing)
 - `docs/ROADMAP_IMPORT.md`
 - `docs/decisions/ADR-001-local-first-architecture.md`
 - `docs/PHASE_0_REPORT.md`
@@ -59,6 +59,18 @@
 - `src/types/index.ts` — curriculum, roadmap types
 - `src/services/api.ts` — API service for new commands
 - `docs/PHASE_2_REPORT.md`
+
+## Phase 3 deliverables (complete)
+- `src-tauri/src/planner.rs` — weekly generation, daily agenda, task completion/move/skip, availability, backlog replanning, weekly review (with unit + DB tests)
+- `src-tauri/src/learning.rs` — custom learning entries, activity events, streak/heatmap summary (with tests)
+- `src-tauri/src/db.rs` — persisted settings (study days, cadence, capacity, meaningful-activity threshold) with round-trip test
+- `src-tauri/src/commands.rs` — real get/save settings; migrations run at startup (`main.rs`)
+- `src/features/dashboard/Dashboard.tsx` — Today agenda, generate/replan, complete tasks, add learning entries, stats
+- `src/features/review/Review.tsx` — weekly review, per-track summary, activity heatmap
+- `src/features/settings/Settings.tsx` — study days, capacity and weekly cadence editor
+- `src/lib/dates.ts` — local date/week helpers
+- `src/types/index.ts`, `src/services/api.ts` — planner/learning types and commands
+- `docs/PHASE_3_REPORT.md`
 
 ## Roadmap source (present)
 - `docs/roadmap/six_month_engineering_roadmap.md` — complete 26-week roadmap imported and validated as a planning reference.

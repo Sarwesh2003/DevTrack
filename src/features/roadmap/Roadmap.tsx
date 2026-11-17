@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '@/services/api'
 import type { Track, Module, Topic, ImportRoadmapResponse } from '@/types'
 
-type Page = 'roadmap' | 'settings' | 'dashboard'
+type Page = 'roadmap' | 'settings' | 'dashboard' | 'review'
 
 interface RoadmapProps {
   onNavigate: (page: Page) => void

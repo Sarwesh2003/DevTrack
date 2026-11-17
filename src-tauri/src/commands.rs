@@ -1,4 +1,7 @@
-use crate::db::{check_db_health, get_default_settings, open_connection, resolve_db_path, Settings};
+use crate::db::{
+  check_db_health, get_default_settings, load_settings, open_connection, resolve_db_path,
+  store_settings, Settings,
+};
 use crate::migrations::SCHEMA_VERSION;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -73,16 +76,35 @@ pub async fn health_check() -> HealthResponse {
 
 #[tauri::command]
 pub async fn get_settings() -> SettingsResponse {
+  let mut conn = match open_connection() {
+    Ok(c) => c,
+    Err(_) => {
+      return SettingsResponse {
+        ok: true,
+        settings: get_default_settings(),
+      }
+    }
+  };
+  let _ = crate::migrations::ensure_schema(&mut conn);
   SettingsResponse {
     ok: true,
-    settings: get_default_settings(),
+    settings: load_settings(&conn),
   }
 }
 
 #[tauri::command]
 pub async fn save_settings(req: SaveSettingsRequest) -> SaveSettingsResponse {
-  let _ = req;
-  SaveSettingsResponse { ok: true }
+  let mut conn = match open_connection() {
+    Ok(c) => c,
+    Err(_) => return SaveSettingsResponse { ok: false },
+  };
+  if crate::migrations::ensure_schema(&mut conn).is_err() {
+    return SaveSettingsResponse { ok: false };
+  }
+  match store_settings(&conn, &req.settings) {
+    Ok(()) => SaveSettingsResponse { ok: true },
+    Err(_) => SaveSettingsResponse { ok: false },
+  }
 }
 
 #[tauri::command]

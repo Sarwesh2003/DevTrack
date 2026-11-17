@@ -134,4 +134,64 @@ describe('api service', () => {
     expect(result.ok).toBe(true)
     expect(result.track_count).toBe(5)
   })
+
+  it('getAgenda calls get_agenda with date', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, plan: null, tasks: [], due_revisions: 0, planned_minutes: 0, completed_minutes: 0 })
+    await api.getAgenda('2026-01-05')
+    expect(mockInvoke).toHaveBeenCalledWith('get_agenda', { date: '2026-01-05' })
+  })
+
+  it('generateWeek calls generate_week with snake_case request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, tasks_created: 3, days_generated: 3, warnings: [] })
+    await api.generateWeek('2026-01-05', true)
+    expect(mockInvoke).toHaveBeenCalledWith('generate_week', {
+      req: { week_start: '2026-01-05', force: true },
+    })
+  })
+
+  it('updateStudyTask nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, task: null })
+    await api.updateStudyTask({ id: 'task-1', status: 'done', actual_minutes: 40 })
+    expect(mockInvoke).toHaveBeenCalledWith('update_study_task', {
+      req: { id: 'task-1', status: 'done', actual_minutes: 40 },
+    })
+  })
+
+  it('replanBacklog sends today', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, moved: 2, unplaced: 0 })
+    await api.replanBacklog('2026-01-08')
+    expect(mockInvoke).toHaveBeenCalledWith('replan_backlog', { req: { today: '2026-01-08' } })
+  })
+
+  it('getWeekReview sends week_start', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, week_start: '2026-01-05', goal: null, planned: 0, completed: 0, skipped: 0, planned_minutes: 0, completed_minutes: 0, by_track: {}, tasks: [] })
+    await api.getWeekReview('2026-01-05')
+    expect(mockInvoke).toHaveBeenCalledWith('get_week_review', { week_start: '2026-01-05' })
+  })
+
+  it('createLearningEntry nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'entry-1' })
+    await api.createLearningEntry({
+      title: 'Read JVM notes',
+      entry_date: '2026-01-05',
+      track: 'java',
+      description: 'Studied class loading',
+    })
+    expect(mockInvoke).toHaveBeenCalledWith('create_learning_entry', {
+      req: {
+        title: 'Read JVM notes',
+        entry_date: '2026-01-05',
+        track: 'java',
+        description: 'Studied class loading',
+      },
+    })
+  })
+
+  it('getActivitySummary nests from/to/today', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, days: [], current_streak: 0, longest_streak: 0, total_minutes: 0, active_days: 0, min_meaningful_minutes: 15 })
+    await api.getActivitySummary('2026-01-01', '2026-01-31', '2026-01-05')
+    expect(mockInvoke).toHaveBeenCalledWith('get_activity_summary', {
+      req: { from: '2026-01-01', to: '2026-01-31', today: '2026-01-05' },
+    })
+  })
 })

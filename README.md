@@ -59,12 +59,12 @@ DevTrack/
 
 ## Development phases
 
-Implemented one approved phase at a time from `docs/IMPLEMENTATION_PLAN.md`:
+Implemented one approved phase at a time from `docs/DEVTRACK_IMPLEMENTATION_PLAN.md`:
 
 0. Repository discovery, environment check, architecture and product documentation (Phase 0 — complete)
 1. Desktop shell, SQLite, local file storage, settings and backup foundation (Phase 1 — complete)
 2. Curriculum data model and 26-week roadmap import (Phase 2 — complete)
-3. Daily planner, weekly goals, custom learning entries, rescheduling and activity tracking
+3. Daily planner, weekly goals, custom learning entries, rescheduling and activity tracking (Phase 3 — complete)
 4. NeetCode 250 workspace, attempt/code/notes storage and revision engine
 5. Core Java, LLD and HLD workspaces
 6. FDE learning workspace and project portfolio
@@ -75,17 +75,19 @@ Implemented one approved phase at a time from `docs/IMPLEMENTATION_PLAN.md`:
 
 Prerequisites (Mac): Node.js, npm or pnpm, Rust toolchain, Xcode command-line tools.
 
-### Phase 2 (complete)
+### Phase 3 (complete)
 
 1. Frontend: `npm install && npm run dev` (dev) or `npm run build` (production)
-2. Typecheck: `npx tsc --noEmit`
-3. Tests: `npx vitest run`
-4. Lint: `npx eslint . --ext ts,tsx`
-5. Backend: `cargo build` in `src-tauri/` (requires Xcode license acceptance: `sudo xcodebuild -license accept`)
+2. Desktop app: `cd src-tauri && cargo tauri dev`
+3. Typecheck: `npx tsc --noEmit`
+4. Tests: `npx vitest run` (frontend) and `cargo test` in `src-tauri/` (backend)
+5. Lint: `npx eslint . --ext ts,tsx`
+6. Backend build: `cargo build` in `src-tauri/` (requires Xcode license acceptance: `sudo xcodebuild -license accept`)
 
 ### Next step
 
-Proceed to Phase 3 (daily planner, weekly goals, custom learning entries, rescheduling and activity tracking) after Phase 2 approval.
+Proceed to Phase 4 (NeetCode 250 workspace, attempts/solutions, and the spaced-revision engine)
+after Phase 3 approval.
 
 ## Rules (see AGENTS.md)
 

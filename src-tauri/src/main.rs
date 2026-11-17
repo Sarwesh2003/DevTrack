@@ -3,7 +3,9 @@
 mod commands;
 mod curriculum;
 mod db;
+mod learning;
 mod migrations;
+mod planner;
 mod roadmap_import;
 mod state;
 
@@ -31,9 +33,23 @@ fn main() {
       curriculum::upsert_resource,
       curriculum::upsert_dependency,
       roadmap_import::import_roadmap,
+      planner::get_agenda,
+      planner::generate_week,
+      planner::set_day_availability,
+      planner::update_study_task,
+      planner::create_study_task,
+      planner::replan_backlog,
+      planner::save_weekly_goal,
+      planner::get_week_review,
+      learning::create_learning_entry,
+      learning::list_learning_entries,
+      learning::get_activity_summary,
     ])
     .setup(|_app| {
       let _ = db::init_data_dir()?;
+      if let Ok(mut conn) = db::open_connection() {
+        let _ = migrations::ensure_schema(&mut conn);
+      }
       Ok(())
     })
     .run(tauri::generate_context!())

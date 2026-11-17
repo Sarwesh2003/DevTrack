@@ -19,6 +19,19 @@ import {
   RoadmapWeeksResponse,
   WeeklyPlanItemsResponse,
   ImportRoadmapResponse,
+  AgendaResponse,
+  GenerateWeekResponse,
+  UpdateTaskRequest,
+  UpdateTaskResponse,
+  CreateTaskRequest,
+  CreateTaskResponse,
+  SetAvailabilityRequest,
+  ReplanResponse,
+  WeekReviewResponse,
+  CreateLearningEntryRequest,
+  CreateLearningEntryResponse,
+  ListEntriesResponse,
+  ActivitySummaryResponse,
 } from '@/types'
 
 declare global {
@@ -91,6 +104,62 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
         warnings: [],
         error: undefined,
       } as T
+    case 'get_agenda':
+      return {
+        ok: true,
+        plan: null,
+        tasks: [],
+        due_revisions: 0,
+        planned_minutes: 0,
+        completed_minutes: 0,
+        error: undefined,
+      } as T
+    case 'generate_week':
+      return {
+        ok: true,
+        tasks_created: 0,
+        days_generated: 0,
+        warnings: [],
+        error: undefined,
+      } as T
+    case 'set_day_availability':
+    case 'save_weekly_goal':
+      return { ok: true, task: null, error: undefined } as T
+    case 'update_study_task':
+      return { ok: true, task: null, error: undefined } as T
+    case 'create_study_task':
+      return { ok: true, id: null, error: undefined } as T
+    case 'replan_backlog':
+      return { ok: true, moved: 0, unplaced: 0, error: undefined } as T
+    case 'get_week_review':
+      return {
+        ok: true,
+        week_start: '',
+        goal: null,
+        planned: 0,
+        completed: 0,
+        skipped: 0,
+        planned_minutes: 0,
+        completed_minutes: 0,
+        by_track: {},
+        tasks: [],
+        error: undefined,
+      } as T
+    case 'create_learning_entry':
+      return { ok: true, id: null, error: undefined } as T
+    case 'list_learning_entries':
+      return { ok: true, entries: [], error: undefined } as T
+    case 'get_activity_summary':
+      return {
+        ok: true,
+        days: [],
+        current_streak: 0,
+        longest_streak: 0,
+        total_minutes: 0,
+        active_days: 0,
+        min_meaningful_minutes: 15,
+        error: undefined,
+      } as T
     default:
       throw new Error(`Unknown command: ${cmd}`)
   }
@@ -128,4 +197,33 @@ export const api = {
     invoke<WeeklyPlanItemsResponse>('get_weekly_plan_items', { week_id: weekId }),
   importRoadmap: (content: string) =>
     invoke<ImportRoadmapResponse>('import_roadmap', { req: { content } }),
+
+  // Planner
+  getAgenda: (date: string) => invoke<AgendaResponse>('get_agenda', { date }),
+  generateWeek: (weekStart: string, force = false) =>
+    invoke<GenerateWeekResponse>('generate_week', { req: { week_start: weekStart, force } }),
+  setDayAvailability: (req: SetAvailabilityRequest) =>
+    invoke<UpdateTaskResponse>('set_day_availability', { req }),
+  updateStudyTask: (req: UpdateTaskRequest) =>
+    invoke<UpdateTaskResponse>('update_study_task', { req }),
+  createStudyTask: (req: CreateTaskRequest) =>
+    invoke<CreateTaskResponse>('create_study_task', { req }),
+  replanBacklog: (today: string) =>
+    invoke<ReplanResponse>('replan_backlog', { req: { today } }),
+  saveWeeklyGoal: (req: {
+    week_start_date: string
+    track_targets?: string
+    note?: string
+    reviewed?: boolean
+  }) => invoke<UpdateTaskResponse>('save_weekly_goal', { req }),
+  getWeekReview: (weekStart: string) =>
+    invoke<WeekReviewResponse>('get_week_review', { week_start: weekStart }),
+
+  // Learning entries + activity
+  createLearningEntry: (req: CreateLearningEntryRequest) =>
+    invoke<CreateLearningEntryResponse>('create_learning_entry', { req }),
+  listLearningEntries: (from: string, to: string) =>
+    invoke<ListEntriesResponse>('list_learning_entries', { req: { from, to } }),
+  getActivitySummary: (from: string, to: string, today: string) =>
+    invoke<ActivitySummaryResponse>('get_activity_summary', { req: { from, to, today } }),
 }

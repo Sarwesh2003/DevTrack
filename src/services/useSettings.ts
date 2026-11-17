@@ -17,13 +17,18 @@ export function useSettings() {
       .finally(() => setLoading(false))
   }, [])
 
-  const save = async (next: Settings) => {
+  const save = async (next: Settings): Promise<boolean> => {
     try {
       const res = await api.saveSettings(next)
-      if (res.ok) setSettings(next)
-      else setError('Failed to save settings')
+      if (res.ok) {
+        setSettings(next)
+        return true
+      }
+      setError('Failed to save settings')
+      return false
     } catch {
       setError('Failed to save settings')
+      return false
     }
   }
 

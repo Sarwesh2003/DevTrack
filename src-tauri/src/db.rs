@@ -75,10 +75,27 @@ pub struct Settings {
   pub theme: Option<String>,
   pub dsa_cursor_category: Option<String>,
   pub lld_cursor_topic: Option<String>,
+  #[serde(default)]
+  pub study_days: Option<Vec<i32>>,
+  #[serde(default)]
+  pub cadence: Option<std::collections::HashMap<String, Vec<String>>>,
+  #[serde(default)]
+  pub min_meaningful_minutes: Option<i32>,
+  #[serde(default)]
+  pub daily_buffer_ratio: Option<f64>,
 }
 
 impl Default for Settings {
   fn default() -> Self {
+    let mut cadence = std::collections::HashMap::new();
+    cadence.insert("1".to_string(), vec!["dsa".to_string()]);
+    cadence.insert("2".to_string(), vec!["java".to_string()]);
+    cadence.insert("3".to_string(), vec!["dsa".to_string()]);
+    cadence.insert("4".to_string(), vec!["lld".to_string()]);
+    cadence.insert("5".to_string(), vec!["dsa".to_string()]);
+    cadence.insert("6".to_string(), vec!["fde".to_string()]);
+    cadence.insert("7".to_string(), vec!["review".to_string()]);
+
     Settings {
       data_root: None,
       weekly_capacity_hours: Some(7.5),
@@ -86,6 +103,10 @@ impl Default for Settings {
       theme: Some("dark".to_string()),
       dsa_cursor_category: Some("Tries".to_string()),
       lld_cursor_topic: Some("Bridge Pattern".to_string()),
+      study_days: Some(vec![1, 2, 3, 4, 5, 6]),
+      cadence: Some(cadence),
+      min_meaningful_minutes: Some(15),
+      daily_buffer_ratio: Some(0.15),
     }
   }
 }
@@ -94,6 +115,58 @@ pub fn get_default_settings() -> Settings {
   Settings::default()
 }
 
+/// Load persisted settings, falling back to defaults when absent or unreadable.
+pub fn load_settings(conn: &rusqlite::Connection) -> Settings {
+  let stored: Option<String> = conn
+    .query_row("SELECT value FROM settings WHERE key = 'app'", [], |row| row.get(0))
+    .ok();
+  match stored.and_then(|raw| serde_json::from_str::<Settings>(&raw).ok()) {
+    Some(settings) => settings,
+    None => Settings::default(),
+  }
+}
+
+pub fn store_settings(conn: &rusqlite::Connection, settings: &Settings) -> DbResult<()> {
+  let json = serde_json::to_string(settings)
+    .map_err(|e| DbError::Serialization(e.to_string()))?;
+  conn.execute(
+    "INSERT INTO settings (key, value, updated_at) VALUES ('app', ?1, ?2)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+    rusqlite::params![json, now_rfc3339()],
+  )?;
+  Ok(())
+}
+
 pub fn now_rfc3339() -> String {
   Utc::now().to_rfc3339()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn settings_round_trip_persists_planner_fields() {
+    let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+    crate::migrations::ensure_schema(&mut conn).unwrap();
+
+    // Defaults are returned before anything is stored.
+    let loaded = load_settings(&conn);
+    assert_eq!(loaded.weekly_capacity_hours, Some(7.5));
+    assert_eq!(loaded.study_days, Some(vec![1, 2, 3, 4, 5, 6]));
+
+    let mut settings = Settings::default();
+    settings.weekly_capacity_hours = Some(10.0);
+    settings.study_days = Some(vec![1, 3, 5]);
+    settings.min_meaningful_minutes = Some(20);
+
+    store_settings(&conn, &settings).unwrap();
+    let reloaded = load_settings(&conn);
+
+    assert_eq!(reloaded.weekly_capacity_hours, Some(10.0));
+    assert_eq!(reloaded.study_days, Some(vec![1, 3, 5]));
+    assert_eq!(reloaded.min_meaningful_minutes, Some(20));
+    // Cadence should survive the round trip too.
+    assert!(reloaded.cadence.unwrap().contains_key("1"));
+  }
 }

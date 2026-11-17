@@ -1,10 +1,81 @@
+import { useEffect, useState } from 'react'
 import { useSettings } from '@/services/useSettings'
+import { WEEKDAY_LABELS } from '@/lib/dates'
 
-type Page = 'dashboard' | 'settings' | 'roadmap'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
 type Theme = 'dark' | 'light' | 'system'
 
-export default function Settings({ onNavigate, theme, setTheme }: { onNavigate: (page: Page) => void; theme: Theme; setTheme: (t: Theme) => void }) {
+const TRACK_OPTIONS: { handle: string; label: string }[] = [
+  { handle: 'dsa', label: 'DSA' },
+  { handle: 'java', label: 'Java' },
+  { handle: 'lld', label: 'LLD' },
+  { handle: 'hld', label: 'HLD' },
+  { handle: 'fde', label: 'FDE' },
+  { handle: 'review', label: 'Review' },
+]
+
+const DEFAULT_CADENCE: Record<string, string[]> = {
+  '1': ['dsa'],
+  '2': ['java'],
+  '3': ['dsa'],
+  '4': ['lld'],
+  '5': ['dsa'],
+  '6': ['fde'],
+  '7': ['review'],
+}
+
+export default function Settings({
+  onNavigate,
+  theme,
+  setTheme,
+}: {
+  onNavigate: (page: Page) => void
+  theme: Theme
+  setTheme: (t: Theme) => void
+}) {
   const { settings, loading, error, save } = useSettings()
+
+  const [studyDays, setStudyDays] = useState<number[]>([1, 2, 3, 4, 5, 6])
+  const [capacityHours, setCapacityHours] = useState('7.5')
+  const [minMeaningful, setMinMeaningful] = useState('15')
+  const [cadence, setCadence] = useState<Record<string, string[]>>(DEFAULT_CADENCE)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setStudyDays(settings.study_days ?? [1, 2, 3, 4, 5, 6])
+    setCapacityHours(String(settings.weekly_capacity_hours ?? 7.5))
+    setMinMeaningful(String(settings.min_meaningful_minutes ?? 15))
+    setCadence(settings.cadence ?? DEFAULT_CADENCE)
+  }, [settings])
+
+  const toggleDay = (iso: number) => {
+    setStudyDays((prev) =>
+      prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso].sort((a, b) => a - b),
+    )
+  }
+
+  const toggleCadenceTrack = (iso: number, handle: string) => {
+    const key = String(iso)
+    setCadence((prev) => {
+      const current = prev[key] ?? []
+      const next = current.includes(handle)
+        ? current.filter((h) => h !== handle)
+        : [...current, handle]
+      return { ...prev, [key]: next }
+    })
+  }
+
+  const handleSave = async () => {
+    setSaved(false)
+    const result = await save({
+      ...settings,
+      weekly_capacity_hours: Number(capacityHours) || 0,
+      study_days: studyDays,
+      min_meaningful_minutes: Number(minMeaningful) || 0,
+      cadence,
+    })
+    setSaved(result)
+  }
 
   if (loading) return <div className="p-4">Loading settings...</div>
 
@@ -16,104 +87,162 @@ export default function Settings({ onNavigate, theme, setTheme }: { onNavigate: 
       </div>
 
       {error && (
-        <div className="p-3 rounded-md bg-destructive/10 border border-destructive/50 text-destructive text-sm">
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="border rounded-lg p-4 space-y-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="space-y-4 rounded-lg border border-border p-4">
           <h3 className="font-semibold">Theme</h3>
-          <div className="flex items-center gap-2">
-            <label className="text-sm cursor-pointer group">
+          <div className="flex items-center gap-4">
+            <label className="group flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="theme"
                 value="dark"
                 checked={theme === 'dark' || theme === 'system'}
-                className="accent-foreground"
                 onChange={() => {
                   setTheme('dark')
                   save({ ...settings, theme: 'dark' })
                 }}
               />
-              <span className="group-hover:text-muted-foreground transition-colors">Dark</span>
+              <span className="transition-colors group-hover:text-muted-foreground">Dark</span>
             </label>
-            <label className="text-sm cursor-pointer group">
+            <label className="group flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="theme"
                 value="light"
                 checked={theme === 'light'}
-                className="accent-foreground"
                 onChange={() => {
                   setTheme('light')
                   save({ ...settings, theme: 'light' })
                 }}
               />
-              <span className="group-hover:text-muted-foreground transition-colors">Light</span>
+              <span className="transition-colors group-hover:text-muted-foreground">Light</span>
             </label>
           </div>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="font-semibold">Weekly Capacity</h3>
+        <div className="space-y-3 rounded-lg border border-border p-4">
+          <h3 className="font-semibold">Weekly capacity</h3>
           <div className="flex items-center gap-2">
-            <span className="text-sm">{settings.weekly_capacity_hours ?? 7.5}</span>
-            <span className="text-xs text-muted-foreground">hours/week</span>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={capacityHours}
+              onChange={(e) => setCapacityHours(e.target.value)}
+              className="w-24 rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">hours / week</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Adjust your available study time per week.
-          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Minimum meaningful activity</span>
+            <input
+              type="number"
+              min={0}
+              value={minMeaningful}
+              onChange={(e) => setMinMeaningful(e.target.value)}
+              className="w-20 rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">min</span>
+          </div>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="font-semibold">Timezone</h3>
-          <p className="text-sm text-muted-foreground">
-            {settings.timezone ?? 'Asia/Kolkata'}
+        <div className="space-y-3 rounded-lg border border-border p-4 md:col-span-2">
+          <h3 className="font-semibold">Study days</h3>
+          <p className="text-xs text-muted-foreground">
+            Unchecked days are treated as rest / unavailable and do not count as missed.
           </p>
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5, 6, 7].map((iso) => (
+              <button
+                key={iso}
+                type="button"
+                onClick={() => toggleDay(iso)}
+                className={`rounded-full px-3 py-1 text-sm transition-colors ${
+                  studyDays.includes(iso)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {WEEKDAY_LABELS[iso]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-border p-4 md:col-span-2">
+          <h3 className="font-semibold">Weekly cadence</h3>
+          <p className="text-xs text-muted-foreground">
+            Choose which tracks are scheduled on each day. Days without a track fall back to the
+            default cadence.
+          </p>
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5, 6, 7].map((iso) => (
+              <div key={iso} className="flex flex-wrap items-center gap-3">
+                <span className="w-10 text-sm font-medium text-muted-foreground">
+                  {WEEKDAY_LABELS[iso]}
+                </span>
+                {TRACK_OPTIONS.map((opt) => {
+                  const active = (cadence[String(iso)] ?? []).includes(opt.handle)
+                  return (
+                    <label key={opt.handle} className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => toggleCadenceTrack(iso, opt.handle)}
+                      />
+                      {opt.label}
+                    </label>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <h3 className="font-semibold">Timezone</h3>
+          <p className="text-sm text-muted-foreground">{settings.timezone ?? 'Asia/Kolkata'}</p>
           <p className="text-xs text-muted-foreground">
             Used for date-based scheduling and revision intervals.
           </p>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="font-semibold">Data Directory</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <h3 className="font-semibold">Data directory</h3>
+          <p className="text-xs text-muted-foreground">
             App-managed local directory for SQLite and content files.
           </p>
-          <p className="text-xs font-mono text-muted-foreground truncate">
-            ~/Documents/DevTrack/
-          </p>
-        </div>
-
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="font-semibold">DSA Cursor</h3>
-          <p className="text-sm text-muted-foreground">
-            {settings.dsa_cursor_category ?? 'Tries'}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            New DSA learning starts at Tries. Categories through Trees are revision-only.
-          </p>
-        </div>
-
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="font-semibold">LLD Cursor</h3>
-          <p className="text-sm text-muted-foreground">
-            {settings.lld_cursor_topic ?? 'Bridge Pattern'}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            New LLD learning starts at Bridge Pattern. Content through Composite is revision-only.
-          </p>
+          <p className="truncate font-mono text-xs text-muted-foreground">~/DevTrack/</p>
         </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSave}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Save planner settings
+        </button>
+        {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved.</span>}
+      </div>
+
+      <div className="flex items-center gap-2">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="text-sm border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+          className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
         >
-          Go to Dashboard
+          Go to Today
+        </button>
+        <button
+          onClick={() => onNavigate('review')}
+          className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+        >
+          Weekly Review
         </button>
       </div>
     </div>

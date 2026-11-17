@@ -1,107 +1,442 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/services/api'
-import type { HealthResponse, Track } from '@/types'
+import type {
+  Track,
+  AgendaResponse,
+  StudyTask,
+  ActivitySummaryResponse,
+  LearningEntry,
+} from '@/types'
+import {
+  todayISO,
+  weekStartISO,
+  addDaysISO,
+  formatDateHuman,
+} from '@/lib/dates'
 
-type Page = 'dashboard' | 'settings' | 'roadmap'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
+
+const isTauri =
+  typeof window !== 'undefined' &&
+  (typeof window.__TAURI__?.core?.invoke === 'function' ||
+    typeof window.__TAURI__?.invoke === 'function')
+
+const TRACK_LABEL: Record<string, string> = {
+  a: 'Java',
+  b: 'DSA',
+  c: 'LLD',
+  d: 'HLD',
+  e: 'FDE',
+  review: 'Review',
+  revision: 'Revision',
+  custom: 'Custom',
+}
+
+const GROUPS: { kind: string; label: string }[] = [
+  { kind: 'planned', label: 'Primary learning' },
+  { kind: 'revision', label: 'Revision' },
+  { kind: 'review', label: 'Weekly review' },
+  { kind: 'stretch', label: 'Optional stretch' },
+  { kind: 'custom', label: 'Additional learning' },
+]
+
+function trackLabel(track: string): string {
+  return TRACK_LABEL[track] ?? track
+}
 
 export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
+  const [today] = useState(todayISO())
   const [tracks, setTracks] = useState<Track[] | null>(null)
+  const [agenda, setAgenda] = useState<AgendaResponse | null>(null)
+  const [activity, setActivity] = useState<ActivitySummaryResponse | null>(null)
+  const [entries, setEntries] = useState<LearningEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [actuals, setActuals] = useState<Record<string, number>>({})
+
+  const [showEntry, setShowEntry] = useState(false)
+  const [entryTitle, setEntryTitle] = useState('')
+  const [entryTrack, setEntryTrack] = useState('java')
+  const [entryDescription, setEntryDescription] = useState('')
+  const [entryMinutes, setEntryMinutes] = useState('30')
+
+  const refresh = useCallback(async () => {
+    const from = addDaysISO(today, -90)
+    const [agendaRes, activityRes, entriesRes] = await Promise.all([
+      api.getAgenda(today).catch(() => null),
+      api.getActivitySummary(from, today, today).catch(() => null),
+      api.listLearningEntries(addDaysISO(today, -14), today).catch(() => null),
+    ])
+    if (agendaRes?.ok) {
+      setAgenda(agendaRes)
+      setActuals((prev) => {
+        const next = { ...prev }
+        for (const task of agendaRes.tasks) {
+          if (next[task.id] === undefined) {
+            next[task.id] = task.actual_minutes ?? task.estimate_minutes
+          }
+        }
+        return next
+      })
+    }
+    if (activityRes?.ok) setActivity(activityRes)
+    if (entriesRes?.ok) setEntries(entriesRes.entries)
+  }, [today])
 
   useEffect(() => {
-    Promise.all([
-      api.healthCheck().catch(() => null),
-      api.getTracks().catch(() => null),
-    ])
-      .then(([healthRes, tracksRes]) => {
-        setHealth(healthRes)
-        setTracks(tracksRes?.ok ? tracksRes.tracks : null)
+    Promise.all([api.getTracks().catch(() => null), refresh()])
+      .then(([trackRes]) => {
+        setTracks(trackRes?.ok ? trackRes.tracks : null)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [refresh])
 
   const hasCurriculum = (tracks?.length ?? 0) > 0
 
+  const runAction = async (fn: () => Promise<void>) => {
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      await fn()
+      await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Action failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleGenerate = () =>
+    runAction(async () => {
+      const res = await api.generateWeek(weekStartISO(today))
+      setMessage(
+        res.ok
+          ? `Generated ${res.tasks_created} tasks for the week.`
+          : res.error ?? 'Failed to generate plan',
+      )
+      if (!res.ok) setError(res.error ?? 'Failed to generate plan')
+    })
+
+  const handleReplan = () =>
+    runAction(async () => {
+      const res = await api.replanBacklog(today)
+      setMessage(
+        res.ok
+          ? `Rescheduled ${res.moved} missed task(s)${res.unplaced ? `, ${res.unplaced} still unplaced` : ''}.`
+          : res.error ?? 'Failed to reschedule',
+      )
+    })
+
+  const handleComplete = (task: StudyTask) =>
+    runAction(async () => {
+      const res = await api.updateStudyTask({
+        id: task.id,
+        status: 'done',
+        actual_minutes: actuals[task.id] ?? task.estimate_minutes,
+      })
+      if (!res.ok) setError(res.error ?? 'Failed to complete task')
+    })
+
+  const handleSkip = (task: StudyTask) =>
+    runAction(async () => {
+      const res = await api.updateStudyTask({ id: task.id, status: 'skipped' })
+      if (!res.ok) setError(res.error ?? 'Failed to skip task')
+    })
+
+  const handleMove = (task: StudyTask) =>
+    runAction(async () => {
+      const res = await api.updateStudyTask({
+        id: task.id,
+        scheduled_date: addDaysISO(task.scheduled_date, 1),
+      })
+      if (!res.ok) setError(res.error ?? 'Failed to move task')
+    })
+
+  const handleAddEntry = () =>
+    runAction(async () => {
+      const res = await api.createLearningEntry({
+        title: entryTitle.trim(),
+        entry_date: today,
+        track: entryTrack,
+        description: entryDescription.trim(),
+        duration_minutes: Number(entryMinutes) || 0,
+      })
+      if (res.ok) {
+        setShowEntry(false)
+        setEntryTitle('')
+        setEntryDescription('')
+        setEntryMinutes('30')
+        setMessage('Learning entry added.')
+      } else {
+        setError(res.error ?? 'Failed to add entry')
+      }
+    })
+
+  if (loading) return <div className="p-4 text-muted-foreground">Loading today...</div>
+
+  const tasks = agenda?.tasks ?? []
+  const doneCount = tasks.filter((t) => t.status === 'done').length
+  const plannedMinutes = agenda?.planned_minutes ?? 0
+  const completedMinutes = agenda?.completed_minutes ?? 0
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">What to Study Today</h2>
-        <p className="text-muted-foreground">
-          {hasCurriculum
-            ? 'Curriculum imported. The daily agenda and scheduling arrive in Phase 3.'
-            : 'Your daily learning agenda will appear here once the roadmap is imported.'}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-border p-4">
-          <h3 className="mb-2 font-semibold">Database Health</h3>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Checking...</p>
-          ) : health ? (
-            <div className="space-y-2">
-              <p className="text-sm">
-                Connected:{' '}
-                <span
-                  className={`font-mono ${
-                    health.ok ? 'text-green-600 dark:text-green-400' : 'text-destructive'
-                  }`}
-                >
-                  {String(health.health.connected)}
-                </span>
-              </p>
-              <p className="text-sm">
-                Version: <span className="font-mono">{health.health.version}</span>
-              </p>
-              <p className="truncate text-xs text-muted-foreground">{health.health.path}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-destructive">Unable to check database</p>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-border p-4">
-          <h3 className="mb-2 font-semibold">Curriculum</h3>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : hasCurriculum ? (
-            <div className="space-y-1">
-              <p className="text-sm">
-                <span className="font-mono text-lg">{tracks!.length}</span> tracks imported
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Java, DSA, LLD, HLD and FDE curriculum loaded.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Not imported yet</p>
-              <button
-                onClick={() => onNavigate('roadmap')}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Import Roadmap
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-border p-4">
-          <h3 className="mb-2 font-semibold">Next Step</h3>
-          <p className="text-sm text-muted-foreground">Phase 3</p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Daily planner, weekly goals, revision scheduling and activity tracking.
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">What to Study Today</h2>
+          <p className="text-muted-foreground">
+            {formatDateHuman(today)} · Week of {formatDateHuman(weekStartISO(today))}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleGenerate}
+            disabled={!isTauri || busy}
+            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Generate this week's plan
+          </button>
+          <button
+            onClick={handleReplan}
+            disabled={!isTauri || busy}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Replan missed
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-2">
+      {!isTauri && (
+        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+          Planner actions require the desktop app. Run `npm run tauri dev`.
+        </div>
+      )}
+
+      {message && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {!hasCurriculum && (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            No curriculum imported yet. Import the roadmap to generate a study plan.
+          </p>
+          <button
+            onClick={() => onNavigate('roadmap')}
+            className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Import Roadmap
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard label="Completed today" value={`${doneCount}/${tasks.length}`} />
+        <StatCard
+          label="Minutes"
+          value={`${completedMinutes}/${plannedMinutes}`}
+          hint="done / planned"
+        />
+        <StatCard label="Current streak" value={`${activity?.current_streak ?? 0} d`} />
+        <StatCard label="Revisions due" value={`${agenda?.due_revisions ?? 0}`} />
+      </div>
+
+      {hasCurriculum && tasks.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            No tasks for today yet. Use “Generate this week's plan” to build an agenda from your
+            curriculum and available time.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {GROUPS.map((group) => {
+            const groupTasks = tasks.filter((t) => t.kind === group.kind)
+            if (groupTasks.length === 0) return null
+            return (
+              <section key={group.kind}>
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </h3>
+                <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                  {groupTasks.map((task) => (
+                    <li key={task.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                            {trackLabel(task.track)}
+                          </span>
+                          <span
+                            className={`truncate text-sm ${
+                              task.status === 'done' ? 'line-through text-muted-foreground' : ''
+                            }`}
+                          >
+                            {task.title}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {task.estimate_minutes} min planned
+                          {task.status === 'done' &&
+                            ` · ${task.actual_minutes ?? task.estimate_minutes} min actual`}
+                          {task.status === 'skipped' && ' · skipped'}
+                        </div>
+                      </div>
+
+                      {task.status === 'planned' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={actuals[task.id] ?? task.estimate_minutes}
+                            onChange={(e) =>
+                              setActuals((prev) => ({ ...prev, [task.id]: Number(e.target.value) }))
+                            }
+                            className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                            aria-label="Actual minutes"
+                          />
+                          <button
+                            onClick={() => handleComplete(task)}
+                            disabled={busy}
+                            className="rounded-md bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                          >
+                            Done
+                          </button>
+                          <button
+                            onClick={() => handleMove(task)}
+                            disabled={busy}
+                            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                          >
+                            Move +1d
+                          </button>
+                          <button
+                            onClick={() => handleSkip(task)}
+                            disabled={busy}
+                            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                          >
+                            Skip
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            task.status === 'done'
+                              ? 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {task.status}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
+      )}
+
+      <section className="rounded-lg border border-border p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Additional learning</h3>
+          <button
+            onClick={() => setShowEntry((v) => !v)}
+            disabled={!isTauri}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {showEntry ? 'Cancel' : '+ Add Learning Entry'}
+          </button>
+        </div>
+
+        {showEntry && (
+          <form
+            className="mt-3 space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (entryTitle.trim() && entryDescription.trim()) handleAddEntry()
+            }}
+          >
+            <input
+              value={entryTitle}
+              onChange={(e) => setEntryTitle(e.target.value)}
+              placeholder="Title"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="flex gap-2">
+              <select
+                value={entryTrack}
+                onChange={(e) => setEntryTrack(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="java">Java</option>
+                <option value="dsa">DSA</option>
+                <option value="lld">LLD</option>
+                <option value="hld">HLD</option>
+                <option value="fde">FDE</option>
+                <option value="other">Other</option>
+              </select>
+              <input
+                type="number"
+                min={0}
+                value={entryMinutes}
+                onChange={(e) => setEntryMinutes(e.target.value)}
+                className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                aria-label="Duration minutes"
+              />
+            </div>
+            <textarea
+              value={entryDescription}
+              onChange={(e) => setEntryDescription(e.target.value)}
+              placeholder="What did you learn?"
+              rows={2}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Save entry
+            </button>
+          </form>
+        )}
+
+        {entries.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {entries.slice(0, 5).map((entry) => (
+              <li key={entry.id} className="rounded-md border border-border/60 p-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate">{entry.title}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {trackLabel(entry.track)}
+                    {entry.duration_minutes ? ` · ${entry.duration_minutes} min` : ''}
+                  </span>
+                </div>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                  {entry.description}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="flex items-center gap-2 pt-1">
         <button
-          onClick={() => onNavigate('roadmap')}
+          onClick={() => onNavigate('review')}
           className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
         >
-          View Roadmap
+          Weekly review
         </button>
         <button
           onClick={() => onNavigate('settings')}
@@ -110,6 +445,16 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
           Go to Settings
         </button>
       </div>
+    </div>
+  )
+}
+
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xl font-semibold">{value}</div>
+      {hint && <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{hint}</div>}
     </div>
   )
 }
