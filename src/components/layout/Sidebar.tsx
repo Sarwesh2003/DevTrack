@@ -1,24 +1,29 @@
-const navItems = [
-  { label: 'Dashboard', href: '#dashboard' },
-  { label: 'Today', href: '#today' },
-  { label: 'Roadmap', href: '#roadmap' },
-  { label: 'DSA', href: '#dsa' },
-  { label: 'Core Java', href: '#java' },
-  { label: 'LLD', href: '#lld' },
-  { label: 'HLD', href: '#hld' },
-  { label: 'FDE', href: '#fde' },
-  { label: 'Projects', href: '#projects' },
-  { label: 'Revision', href: '#revision' },
-  { label: 'Analytics', href: '#analytics' },
-  { label: 'Settings', href: '#settings' },
+
+type Page = 'dashboard' | 'settings' | 'roadmap'
+
+const navItems: { label: string; page: Page }[] = [
+  { label: 'Dashboard', page: 'dashboard' },
+  { label: 'Today', page: 'dashboard' },
+  { label: 'Roadmap', page: 'roadmap' },
+  { label: 'DSA', page: 'dashboard' },
+  { label: 'Core Java', page: 'dashboard' },
+  { label: 'LLD', page: 'dashboard' },
+  { label: 'HLD', page: 'dashboard' },
+  { label: 'FDE', page: 'dashboard' },
+  { label: 'Projects', page: 'dashboard' },
+  { label: 'Revision', page: 'dashboard' },
+  { label: 'Analytics', page: 'dashboard' },
+  { label: 'Settings', page: 'settings' },
 ]
 
 interface SidebarProps {
   open: boolean
   onToggle: () => void
+  onNavigate: (page: Page) => void
+  activePage: Page
 }
 
-export default function Sidebar({ open, onToggle }: SidebarProps) {
+export default function Sidebar({ open, onToggle, onNavigate, activePage }: SidebarProps) {
   return (
     <aside
       className={`fixed left-0 top-0 bottom-0 w-16 lg:relative lg:static lg:w-64 border-r border-border bg-background transition-all duration-300 ${!open && 'lg:hidden'}`}
@@ -39,15 +44,22 @@ export default function Sidebar({ open, onToggle }: SidebarProps) {
         </button>
       </div>
       <nav className="p-3 space-y-1">
-        {navItems.map((item) => (
-          <a
-            key={item.label}
-            href={item.href}
-            className="flex items-center rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            {item.label}
-          </a>
-        ))}
+        {navItems.map((item) => {
+          const active = activePage === item.page
+          return (
+            <button
+              key={item.label}
+              onClick={() => onNavigate(item.page)}
+              className={`flex items-center rounded-md px-3 py-2 text-sm transition-colors ${
+                active
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {item.label}
+            </button>
+          )
+        })}
       </nav>
     </aside>
   )

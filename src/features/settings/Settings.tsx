@@ -1,8 +1,9 @@
 import { useSettings } from '@/services/useSettings'
 
-type Page = 'dashboard' | 'settings'
+type Page = 'dashboard' | 'settings' | 'roadmap'
+type Theme = 'dark' | 'light' | 'system'
 
-export default function Settings({ onNavigate }: { onNavigate: (page: Page) => void }) {
+export default function Settings({ onNavigate, setTheme }: { onNavigate: (page: Page) => void; setTheme: (t: Theme) => void }) {
   const { settings, loading, error, save } = useSettings()
 
   if (loading) return <div className="p-4">Loading settings...</div>
@@ -31,7 +32,10 @@ export default function Settings({ onNavigate }: { onNavigate: (page: Page) => v
                 value="dark"
                 defaultChecked={settings.theme !== 'light'}
                 className="accent-foreground"
-                onChange={() => save({ ...settings, theme: 'dark' })}
+                onChange={() => {
+                  setTheme('dark')
+                  save({ ...settings, theme: 'dark' })
+                }}
               />
               <span className="group-hover:text-muted-foreground transition-colors">Dark</span>
             </label>
@@ -42,7 +46,10 @@ export default function Settings({ onNavigate }: { onNavigate: (page: Page) => v
                 value="light"
                 defaultChecked={settings.theme === 'light'}
                 className="accent-foreground"
-                onChange={() => save({ ...settings, theme: 'light' })}
+                onChange={() => {
+                  setTheme('light')
+                  save({ ...settings, theme: 'light' })
+                }}
               />
               <span className="group-hover:text-muted-foreground transition-colors">Light</span>
             </label>
