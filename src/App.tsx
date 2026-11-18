@@ -4,8 +4,9 @@ import Dashboard from '@/features/dashboard/Dashboard'
 import Settings from '@/features/settings/Settings'
 import Roadmap from '@/features/roadmap/Roadmap'
 import Review from '@/features/review/Review'
+import DSA from '@/features/dsa/DSA'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
 type Theme = 'dark' | 'light' | 'system'
 
 export default function App() {
@@ -30,6 +31,8 @@ export default function App() {
         <Settings onNavigate={setPage} theme={theme} setTheme={setTheme} />
       ) : page === 'review' ? (
         <Review onNavigate={setPage} />
+      ) : page === 'dsa' ? (
+        <DSA onNavigate={setPage} />
       ) : (
         <Roadmap onNavigate={setPage} />
       )}

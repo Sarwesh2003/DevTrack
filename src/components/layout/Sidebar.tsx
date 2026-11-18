@@ -1,9 +1,10 @@
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
 
 const navItems: { label: string; page: Page }[] = [
   { label: 'Today', page: 'dashboard' },
   { label: 'Roadmap', page: 'roadmap' },
+  { label: 'DSA', page: 'dsa' },
   { label: 'Weekly Review', page: 'review' },
   { label: 'Settings', page: 'settings' },
 ]

@@ -283,6 +283,12 @@ export interface AgendaResponse {
   error?: string
 }
 
+export interface OverdueTasksResponse {
+  ok: boolean
+  tasks: StudyTask[]
+  error?: string
+}
+
 export interface GenerateWeekResponse {
   ok: boolean
   tasks_created: number
@@ -415,5 +421,220 @@ export interface ActivitySummaryResponse {
   total_minutes: number
   active_days: number
   min_meaningful_minutes: number
+  error?: string
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: DSA / NeetCode 250 workspace, attempts and revision engine
+// ---------------------------------------------------------------------------
+
+export interface NeetcodeRow {
+  official_order: number
+  problem_id: string
+  title: string
+  url: string
+  category: string
+  difficulty: string
+  category_order: number
+  source_name: string
+  source_version: string
+}
+
+export interface ImportNeetcodeRequest {
+  content: string
+}
+
+export interface ImportNeetcodeResponse {
+  ok: boolean
+  imported: number
+  skipped: number
+  previously_covered: number
+  new_learning: number
+  warnings: string[]
+  error?: string
+}
+
+export interface PreviewNeetcodeResponse {
+  ok: boolean
+  total_rows: number
+  valid_rows: number
+  previously_covered: number
+  new_learning: number
+  by_category: CategoryCount[]
+  sample: NeetcodeRow[]
+  error?: string
+}
+
+export interface CategoryCount {
+  category: string
+  count: number
+  previously_covered: boolean
+}
+
+export interface Problem {
+  id: string
+  external_id: string
+  title: string
+  category: string
+  difficulty: string
+  url: string
+  official_order: number
+  is_previously_covered: boolean
+  tags: string[]
+  is_favorite: boolean
+  attempt_count: number
+  solved: boolean
+}
+
+export interface GetProblemsRequest {
+  category?: string
+  difficulty?: string
+  search?: string
+  cover_filter?: 'all' | 'new' | 'revision'
+}
+
+export interface ProblemListResponse {
+  ok: boolean
+  problems: Problem[]
+  total: number
+  error?: string
+}
+
+export interface Attempt {
+  id: string
+  problem_id: string
+  attempt_date: string
+  outcome: string
+  duration_minutes?: number
+  notes?: string
+  code_file?: string
+  complexity_note?: string
+  edge_cases?: string
+  interview_explanation?: string
+  created_at: string
+}
+
+export interface RecordAttemptRequest {
+  problem_id: string
+  attempt_date: string
+  outcome: string
+  duration_minutes?: number
+  notes?: string
+  code_file?: string
+  complexity_note?: string
+  edge_cases?: string
+  interview_explanation?: string
+}
+
+export interface RecordAttemptResponse {
+  ok: boolean
+  id: string | null
+  error?: string
+}
+
+export interface ListAttemptsResponse {
+  ok: boolean
+  attempts: Attempt[]
+  error?: string
+}
+
+export interface Solution {
+  id: string
+  problem_id: string
+  file_path: string
+  content?: string
+  language: string
+  updated_at: string
+}
+
+export interface SaveSolutionRequest {
+  problem_id: string
+  content: string
+}
+
+export interface SaveSolutionResponse {
+  ok: boolean
+  file_path: string | null
+  error?: string
+}
+
+export interface GetSolutionResponse {
+  ok: boolean
+  solution: Solution | null
+  error?: string
+}
+
+export interface RevisionItemView {
+  id: string
+  source_type: string
+  source_id: string
+  initial_completion_date?: string
+  last_reviewed_date?: string
+  next_due_date: string
+  current_interval: number
+  repetition: number
+  state: string
+  recall_result?: string
+  confidence?: number
+  notes?: string
+}
+
+export interface RecordReviewRequest {
+  revision_item_id: string
+  reviewed_at: string
+  recall_result: string
+  confidence?: number
+  notes?: string
+  evidence?: string
+}
+
+export interface RecordReviewResponse {
+  ok: boolean
+  revision_item: RevisionItemView | null
+  error?: string
+}
+
+export interface GetRevisionQueueResponse {
+  ok: boolean
+  items: RevisionItemView[]
+  error?: string
+}
+
+export interface StartRevisionBaselineResponse {
+  ok: boolean
+  created: number
+  error?: string
+}
+
+export interface CategoryProgress {
+  category: string
+  total: number
+  attempted: number
+  solved: number
+  previously_covered: boolean
+}
+
+export interface GetDsaProgressResponse {
+  ok: boolean
+  categories: CategoryProgress[]
+  total_problems: number
+  total_attempted: number
+  total_solved: number
+  error?: string
+}
+
+export interface ToggleFavoriteRequest {
+  problem_id: string
+  favorite: boolean
+}
+
+export interface ToggleFavoriteResponse {
+  ok: boolean
+  is_favorite: boolean
+  error?: string
+}
+
+export interface OpenUrlResponse {
+  ok: boolean
   error?: string
 }

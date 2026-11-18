@@ -72,10 +72,19 @@
 - `src/types/index.ts`, `src/services/api.ts` — planner/learning types and commands
 - `docs/PHASE_3_REPORT.md`
 
+## Phase 4 deliverables (complete)
+- `src-tauri/src/migrations.rs` — `SCHEMA_VERSION = 4`; v2 adds `favorites` and `solutions`; v3 adds `daily_plans.manual_override`; v4 adds `problem_attempts.study_task_id`; sequential pending-migration loop
+- `src-tauri/src/dsa.rs` — quote-aware NeetCode CSV preview/import, problem list + filters (category/difficulty/search/coverage), favorite toggle, attempts + history, Java solution file save/load under `content/solutions/`, spaced revision engine (1/3/7/14/30/60) + review history, due queue, one-time revision baseline, per-category progress; CSV import also seeds the roadmap DSA track (B1–B18 category topics, B1–B7 revision-only, B8+ new) (with unit tests)
+- `src-tauri/src/main.rs` — `dsa` module and all DSA command registrations
+- `src/features/dsa/DSA.tsx` — DSA page: CSV import preview/confirm, questions list + detail (attempts, solution editor, favorite), revision queue + baseline, category progress
+- `src/App.tsx`, `src/components/layout/Sidebar.tsx`, `src/components/layout/Shell.tsx` — `dsa` page route and nav
+- `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — DSA types, command wrappers and API-shape tests
+- `docs/PHASE_4_REPORT.md`
+
 ## Roadmap source (present)
 - `docs/roadmap/six_month_engineering_roadmap.md` — complete 26-week roadmap imported and validated as a planning reference.
 - `docs/roadmap/CURRENT_PROGRESS.yaml` — per-track progress checkpoints (DSA through Trees, LLD through Composite).
-- `/Users/sarwesh/Downloads/NEETCODE_250.csv` — official NeetCode 250 dataset (250 problems, validated). Import into SQLite deferred to Phase 4.
+- `/Users/sarwesh/Downloads/NEETCODE_250.csv` — official NeetCode 250 dataset (250 problems, validated). Imported via the DSA page's CSV import.
 
 ## Git and delivery
 - Remote: https://github.com/Sarwesh2003/DevTrack.git (master branch).

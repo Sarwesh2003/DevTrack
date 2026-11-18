@@ -581,7 +581,7 @@ fn run_import(conn: &mut rusqlite::Connection, content: &str) -> ImportRoadmapRe
 
   if tracks.iter().any(|t| t.key.eq_ignore_ascii_case("b")) {
     warnings.push(
-      "DSA (track B) problems are imported from the NeetCode 250 dataset in a later phase; the roadmap contributes guidance only, so track B has no problem topics yet."
+      "DSA (track B) is seeded from the NeetCode 250 dataset when the CSV is imported on the DSA page; the roadmap contributes guidance only, so category topics appear only after that import."
         .to_string(),
     );
   }

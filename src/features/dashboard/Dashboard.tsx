@@ -14,7 +14,7 @@ import {
   formatDateHuman,
 } from '@/lib/dates'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
 
 const isTauri =
   typeof window !== 'undefined' &&
@@ -46,6 +46,8 @@ function trackLabel(track: string): string {
 
 export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const [today] = useState(todayISO())
+  const [viewDate, setViewDate] = useState(today)
+  const [overdue, setOverdue] = useState<StudyTask[]>([])
   const [tracks, setTracks] = useState<Track[] | null>(null)
   const [agenda, setAgenda] = useState<AgendaResponse | null>(null)
   const [activity, setActivity] = useState<ActivitySummaryResponse | null>(null)
@@ -64,26 +66,33 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
 
   const refresh = useCallback(async () => {
     const from = addDaysISO(today, -90)
-    const [agendaRes, activityRes, entriesRes] = await Promise.all([
-      api.getAgenda(today).catch(() => null),
+    const [agendaRes, overdueRes, activityRes, entriesRes] = await Promise.all([
+      api.getAgenda(viewDate).catch(() => null),
+      api.listOverdueTasks(today).catch(() => null),
       api.getActivitySummary(from, today, today).catch(() => null),
       api.listLearningEntries(addDaysISO(today, -14), today).catch(() => null),
     ])
-    if (agendaRes?.ok) {
-      setAgenda(agendaRes)
+    const rememberActuals = (list: StudyTask[]) =>
       setActuals((prev) => {
         const next = { ...prev }
-        for (const task of agendaRes.tasks) {
+        for (const task of list) {
           if (next[task.id] === undefined) {
             next[task.id] = task.actual_minutes ?? task.estimate_minutes
           }
         }
         return next
       })
+    if (agendaRes?.ok) {
+      setAgenda(agendaRes)
+      rememberActuals(agendaRes.tasks)
+    }
+    if (overdueRes?.ok) {
+      setOverdue(overdueRes.tasks)
+      rememberActuals(overdueRes.tasks)
     }
     if (activityRes?.ok) setActivity(activityRes)
     if (entriesRes?.ok) setEntries(entriesRes.entries)
-  }, [today])
+  }, [today, viewDate])
 
   useEffect(() => {
     Promise.all([api.getTracks().catch(() => null), refresh()])
@@ -111,13 +120,13 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
 
   const handleGenerate = () =>
     runAction(async () => {
-      const res = await api.generateWeek(weekStartISO(today))
-      setMessage(
-        res.ok
-          ? `Generated ${res.tasks_created} tasks for the week.`
-          : res.error ?? 'Failed to generate plan',
-      )
-      if (!res.ok) setError(res.error ?? 'Failed to generate plan')
+      const res = await api.generateWeek(weekStartISO(today), true)
+      if (res.ok) {
+        const warn = res.warnings.length > 0 ? ` ${res.warnings.join(' ')}` : ''
+        setMessage(`Generated ${res.tasks_created} tasks for the week.${warn}`)
+      } else {
+        setError(res.error ?? 'Failed to generate plan')
+      }
     })
 
   const handleReplan = () =>
@@ -157,14 +166,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
       if (!res.ok) setError(res.error ?? 'Failed to undo task')
     })
 
-  const handleMove = (task: StudyTask) =>
+  const handleMoveTo = (task: StudyTask, date: string) =>
     runAction(async () => {
       const res = await api.updateStudyTask({
         id: task.id,
-        scheduled_date: addDaysISO(task.scheduled_date, 1),
+        scheduled_date: date,
       })
       if (!res.ok) setError(res.error ?? 'Failed to move task')
     })
+
+  const handleMove = (task: StudyTask) =>
+    handleMoveTo(task, addDaysISO(task.scheduled_date, 1))
 
   const handleAddEntry = () =>
     runAction(async () => {
@@ -197,10 +209,34 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">What to Study Today</h2>
-          <p className="text-muted-foreground">
-            {formatDateHuman(today)} · Week of {formatDateHuman(weekStartISO(today))}
-          </p>
+          <h2 className="text-2xl font-bold">
+            {viewDate === today ? 'What to Study Today' : 'What to Study'}
+          </h2>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <button
+              onClick={() => setViewDate(addDaysISO(viewDate, -1))}
+              className="rounded-md border border-border px-2 py-0.5 text-xs transition-colors hover:bg-muted"
+            >
+              ← Prev
+            </button>
+            <span>
+              {formatDateHuman(viewDate)} · Week of {formatDateHuman(weekStartISO(viewDate))}
+            </span>
+            <button
+              onClick={() => setViewDate(addDaysISO(viewDate, 1))}
+              className="rounded-md border border-border px-2 py-0.5 text-xs transition-colors hover:bg-muted"
+            >
+              Next →
+            </button>
+            {viewDate !== today && (
+              <button
+                onClick={() => setViewDate(today)}
+                className="rounded-md border border-border px-2 py-0.5 text-xs transition-colors hover:bg-muted"
+              >
+                Back to today
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -252,7 +288,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Completed today" value={`${doneCount}/${tasks.length}`} />
+        <StatCard
+          label={viewDate === today ? 'Completed today' : 'Completed'}
+          value={`${doneCount}/${tasks.length}`}
+        />
         <StatCard
           label="Minutes"
           value={`${completedMinutes}/${plannedMinutes}`}
@@ -262,11 +301,98 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
         <StatCard label="Revisions due" value={`${agenda?.due_revisions ?? 0}`} />
       </div>
 
+      {overdue.length > 0 && (
+        <section className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">Missed from previous days ({overdue.length})</h3>
+            <button
+              onClick={handleReplan}
+              disabled={!isTauri || busy}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Replan missed
+            </button>
+          </div>
+          <ul className="divide-y divide-border/60">
+            {overdue.map((task) => (
+              <li
+                key={task.id}
+                className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded bg-background px-1.5 py-0.5 text-xs text-muted-foreground">
+                      {formatDateHuman(task.scheduled_date)}
+                    </span>
+                    <span className="rounded bg-background px-1.5 py-0.5 text-xs text-muted-foreground">
+                      {trackLabel(task.track)}
+                    </span>
+                    <span className="truncate text-sm">{task.title}</span>
+                    {task.status === 'skipped' && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        skipped
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {task.estimate_minutes} min planned
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {task.status === 'planned' ? (
+                    <>
+                      <button
+                        onClick={() => handleComplete(task)}
+                        disabled={busy}
+                        className="rounded-md bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        Done
+                      </button>
+                      <button
+                        onClick={() => handleMoveTo(task, today)}
+                        disabled={busy}
+                        className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                      >
+                        Move to today
+                      </button>
+                      <button
+                        onClick={() => handleSkip(task)}
+                        disabled={busy}
+                        className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                      >
+                        Skip
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleUndo(task)}
+                        disabled={busy}
+                        className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                      >
+                        Undo skip
+                      </button>
+                      <button
+                        onClick={() => handleMoveTo(task, today)}
+                        disabled={busy}
+                        className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                      >
+                        Move to today
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {hasCurriculum && tasks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            No tasks for today yet. Use “Generate this week's plan” to build an agenda from your
-            curriculum and available time.
+            No tasks for {viewDate === today ? 'today' : 'this day'} yet. Use “Generate this
+            week's plan” to build an agenda from your curriculum and available time.
           </p>
         </div>
       ) : (
@@ -353,14 +479,18 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
                           </button>
                         </div>
                       ) : (
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${task.status === 'done'
-                            ? 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200'
-                            : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {task.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            skipped
+                          </span>
+                          <button
+                            onClick={() => handleUndo(task)}
+                            disabled={busy}
+                            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                          >
+                            Undo skip
+                          </button>
+                        </div>
                       )}
                     </li>
                   ))}

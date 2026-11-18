@@ -24,21 +24,25 @@ complete a weekly review.
 Deterministic, testable scheduling:
 
 - Weekly generation for a Monday-aligned week, one primary task per study day from the
-  next unstarted topic in the day's cadence track. If a cadence track has no content yet
-  (e.g. DSA problems are imported in Phase 4), it falls back to another track with
+  next unstarted topic in the day's cadence track. DSA cadence days schedule individual
+  unsolved problems from the current new-learning category (Tries onward), sized by
+  difficulty and limited to the day's remaining capacity, instead of one whole category
+  topic. If a cadence track has no content yet, it falls back to another track with
   unstarted topics so the agenda stays believable.
 - Task categories: `planned`, `revision`, `review`, `stretch`, `custom`.
 - Per-day capacity = `weekly_capacity_hours × 60 / study_days`, with a configurable
   buffer (default 15%). A weekly-review task is added on the review day.
 - Topic de-duplication: a topic already referenced by a task is never scheduled again.
+  Topics are ordered naturally by key (A1, A2, …, A10), not as raw text.
 - Rest days respected: generation and replanning never overwrite a day the user marked
   unavailable, and never schedule into past days.
 - Due revisions become revision tasks when a `revision_items` row is due (none until
   Phase 4 seeds them).
 - Task operations: complete (with actual minutes and optional output), skip, move +1 day.
-- Rescheduling: `replan_backlog` redistributes incomplete tasks dated before today across
-  the next N available days by remaining capacity — it moves rows (never copies), so
-  missed work does not pile up or duplicate.
+- Rescheduling: `replan_backlog` redistributes incomplete tasks dated before today (both
+  `planned` and `skipped`, since a skip is treated as deferred) across the next N available
+  days by remaining capacity — it moves rows (never copies) and resets moved tasks to
+  `planned`, so missed work does not pile up or duplicate.
 - Weekly review persistence through `weekly_goals` (note, reviewed flag).
 
 Completing a planned task moves its topic from `Not started` to `Learning`; it never
@@ -54,13 +58,16 @@ auto-completes a topic.
 
 ### 4. Frontend
 
-- **Today (Dashboard):** date/week header, stats (completed today, planned vs actual
-  minutes, streak, revisions due), "Generate this week's plan" and "Replan missed"
-  actions, agenda grouped by primary learning / revision / weekly review / optional
-  stretch / additional learning, per-task actual-minutes input, Done/Move/Skip, and an
+- **Today (Dashboard):** date/week header with prev/next day navigation, an overdue list of
+  tasks dated before today (still planned or skipped) with Done / Move to today / Skip /
+  Undo skip, stats (completed today, planned vs actual minutes, streak, revisions due),
+  "Generate this week's plan" and "Replan missed" actions, agenda grouped by primary
+  learning / revision / weekly review / optional stretch / additional learning, per-task
+  actual-minutes input, Done/Move/Skip (skipped tasks show an "Undo skip" button), and an
   inline "Add Learning Entry" form with recent entries.
 - **Weekly Review:** week navigation, planned/completed/skipped/completion stats,
-  per-track tally, editable weekly goal + "reviewed" flag, and a 12-week activity heatmap.
+  per-track tally, the week's individual tasks grouped by day (planned/missed/done/skipped),
+  editable weekly goal + "reviewed" flag, and a 12-week activity heatmap.
 - **Settings:** editable study days, weekly capacity, minimum meaningful activity, and a
   per-weekday cadence editor (DSA/Java/LLD/HLD/FDE/Review).
 - Sidebar now exposes real pages only: Today, Roadmap, Weekly Review, Settings.

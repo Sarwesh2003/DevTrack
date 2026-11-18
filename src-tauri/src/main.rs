@@ -3,6 +3,7 @@
 mod commands;
 mod curriculum;
 mod db;
+mod dsa;
 mod learning;
 mod migrations;
 mod planner;
@@ -18,6 +19,7 @@ fn main() {
       commands::health_check,
       commands::get_settings,
       commands::save_settings,
+      commands::open_external_url,
       commands::backup_database,
       commands::restore_database,
       commands::run_migrations,
@@ -33,7 +35,20 @@ fn main() {
       curriculum::upsert_resource,
       curriculum::upsert_dependency,
       roadmap_import::import_roadmap,
+      dsa::preview_neetcode,
+      dsa::import_neetcode,
+      dsa::get_problems,
+      dsa::record_attempt,
+      dsa::list_attempts,
+      dsa::save_solution,
+      dsa::get_solution,
+      dsa::record_review,
+      dsa::get_revision_queue,
+      dsa::start_revision_baseline,
+      dsa::get_dsa_progress,
+      dsa::toggle_favorite,
       planner::get_agenda,
+      planner::list_overdue_tasks,
       planner::generate_week,
       planner::set_day_availability,
       planner::update_study_task,

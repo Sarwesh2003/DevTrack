@@ -1,7 +1,7 @@
 use crate::db::{now_rfc3339, DbResult};
 use rusqlite::Connection;
 
-pub const SCHEMA_VERSION: i32 = 1;
+pub const SCHEMA_VERSION: i32 = 4;
 
 pub fn ensure_schema(conn: &mut Connection) -> DbResult<()> {
   conn.execute_batch(
@@ -20,8 +20,8 @@ pub fn ensure_schema(conn: &mut Connection) -> DbResult<()> {
     |row| row.get(0),
   )?;
 
-  if existing < SCHEMA_VERSION {
-    apply_migration(&mut *conn, SCHEMA_VERSION)?;
+  for v in (existing + 1)..=SCHEMA_VERSION {
+    apply_migration(&mut *conn, v)?;
   }
 
   Ok(())
@@ -353,6 +353,68 @@ fn apply_migration(conn: &mut Connection, version: i32) -> DbResult<()> {
       tx.execute(
         "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
         rusqlite::params![version, "initial_schema", now],
+      )?;
+    }
+    2 => {
+      tx.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS favorites (
+          id TEXT PRIMARY KEY,
+          problem_id TEXT NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          UNIQUE(problem_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS solutions (
+          id TEXT PRIMARY KEY,
+          problem_id TEXT NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+          file_path TEXT NOT NULL,
+          content TEXT,
+          language TEXT NOT NULL DEFAULT 'java',
+          updated_at TEXT NOT NULL,
+          UNIQUE(problem_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_favorites_problem ON favorites(problem_id);
+        CREATE INDEX IF NOT EXISTS idx_solutions_problem ON solutions(problem_id);
+        ",
+      )?;
+
+      let now = now_rfc3339();
+      tx.execute(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
+        rusqlite::params![version, "dsa_workspace", now],
+      )?;
+    }
+    3 => {
+      // Distinguish manually edited daily plans from auto-generated ones so
+      // regeneration can refresh capacity/availability from current settings
+      // without overwriting explicit user overrides.
+      tx.execute_batch(
+        "ALTER TABLE daily_plans ADD COLUMN manual_override INTEGER NOT NULL DEFAULT 0;",
+      )?;
+
+      let now = now_rfc3339();
+      tx.execute(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
+        rusqlite::params![version, "daily_plan_manual_override", now],
+      )?;
+    }
+    4 => {
+      // Link problem attempts to the study task that produced them so undoing a
+      // completed DSA task can remove the auto-created solved attempt without
+      // touching attempts the user logged manually.
+      tx.execute_batch(
+        "ALTER TABLE problem_attempts ADD COLUMN study_task_id TEXT;",
+      )?;
+      tx.execute_batch(
+        "CREATE INDEX IF NOT EXISTS idx_problem_attempts_task ON problem_attempts(study_task_id);",
+      )?;
+
+      let now = now_rfc3339();
+      tx.execute(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
+        rusqlite::params![version, "dsa_problem_task_link", now],
       )?;
     }
     _ => {

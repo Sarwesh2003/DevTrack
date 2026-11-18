@@ -10,7 +10,7 @@ import {
   toISODate,
 } from '@/lib/dates'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
 
 const isTauri =
   typeof window !== 'undefined' &&
@@ -205,6 +205,59 @@ export default function Review({ onNavigate }: { onNavigate: (page: Page) => voi
           </div>
 
           <section className="rounded-lg border border-border p-4">
+            <h3 className="mb-2 font-semibold">Tasks</h3>
+            {review && review.tasks.length > 0 ? (
+              <div className="space-y-3">
+                {Object.entries(
+                  review.tasks.reduce<Record<string, typeof review.tasks>>((acc, task) => {
+                    ;(acc[task.scheduled_date] ??= []).push(task)
+                    return acc
+                  }, {}),
+                ).map(([date, dayTasks]) => (
+                  <div key={date}>
+                    <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {formatDateHuman(date)}
+                    </div>
+                    <ul className="divide-y divide-border/60 overflow-hidden rounded-md border border-border/60">
+                      {dayTasks.map((task) => {
+                        const missed = task.status === 'planned' && date < today
+                        return (
+                          <li
+                            key={task.id}
+                            className="flex items-center justify-between gap-2 p-2 text-sm"
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                                {trackLabel(task.track)}
+                              </span>
+                              <span
+                                className={`truncate ${
+                                  task.status === 'done' ? 'text-muted-foreground' : ''
+                                }`}
+                              >
+                                {task.title}
+                              </span>
+                            </div>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(
+                                missed ? 'missed' : task.status,
+                              )}`}
+                            >
+                              {missed ? 'missed' : task.status}
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No tasks planned this week.</p>
+            )}
+          </section>
+
+          <section className="rounded-lg border border-border p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-semibold">Activity</h3>
               <div className="text-xs text-muted-foreground">
@@ -242,6 +295,12 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="mt-1 text-xl font-semibold">{value}</div>
     </div>
   )
+}
+
+function statusClass(status: string): string {
+  if (status === 'done') return 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200'
+  if (status === 'skipped') return 'bg-muted text-muted-foreground'
+  return 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200'
 }
 
 function heatColor(minutes: number, min: number): string {

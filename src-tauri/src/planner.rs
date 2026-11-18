@@ -239,6 +239,13 @@ pub struct TrackTally {
   pub completed: i32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OverdueTasksResponse {
+  pub ok: bool,
+  pub tasks: Vec<StudyTask>,
+  pub error: Option<String>,
+}
+
 // ---------------------------------------------------------------------------
 // Repository helpers
 // ---------------------------------------------------------------------------
@@ -296,14 +303,21 @@ fn ensure_daily_plan(
   available: bool,
   capacity: i32,
 ) -> rusqlite::Result<String> {
-  if let Some(id) = conn
+  if let Some((id, manual)) = conn
     .query_row(
-      "SELECT id FROM daily_plans WHERE plan_date = ?1",
+      "SELECT id, COALESCE(manual_override, 0) FROM daily_plans WHERE plan_date = ?1",
       params![date],
-      |r| r.get::<_, String>(0),
+      |r| Ok((r.get::<_, String>(0)?, r.get::<_, i32>(1)?)),
     )
     .optional()?
   {
+    // Auto-generated plans track current settings; manual overrides are kept.
+    if manual == 0 {
+      conn.execute(
+        "UPDATE daily_plans SET available = ?1, capacity_minutes = ?2 WHERE id = ?3",
+        params![available as i32, capacity, id],
+      )?;
+    }
     return Ok(id);
   }
 
@@ -333,7 +347,7 @@ fn upsert_plan(
 
   if let Some(id) = existing {
     conn.execute(
-      "UPDATE daily_plans SET available = ?1, capacity_minutes = ?2, note = ?3 WHERE id = ?4",
+      "UPDATE daily_plans SET available = ?1, capacity_minutes = ?2, note = ?3, manual_override = 1 WHERE id = ?4",
       params![available as i32, capacity, note, id],
     )?;
     return Ok(id);
@@ -341,7 +355,7 @@ fn upsert_plan(
 
   let id = Uuid::new_v4().to_string();
   conn.execute(
-    "INSERT INTO daily_plans (id, plan_date, capacity_minutes, available, note, created_at) VALUES (?1,?2,?3,?4,?5,?6)",
+    "INSERT INTO daily_plans (id, plan_date, capacity_minutes, available, note, manual_override, created_at) VALUES (?1,?2,?3,?4,?5,1,?6)",
     params![id, date, capacity, available as i32, note, now_rfc3339()],
   )?;
   Ok(id)
@@ -380,7 +394,7 @@ fn next_new_topic(
        WHERE tr.key = ?1
          AND t.status = 'Not started'
          AND t.id NOT IN (SELECT topic_id FROM study_tasks WHERE topic_id IS NOT NULL)
-       ORDER BY m.position, t.key
+       ORDER BY m.position, LENGTH(t.key), t.key
        LIMIT 1",
       params![track_key],
       |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
@@ -409,16 +423,231 @@ fn insert_task(
   track: &str,
   topic_id: Option<&str>,
   revision_item_id: Option<&str>,
+  problem_id: Option<&str>,
   estimate: i32,
   position: i32,
 ) -> rusqlite::Result<String> {
   let id = Uuid::new_v4().to_string();
   conn.execute(
     "INSERT INTO study_tasks (id, daily_plan_id, kind, title, track, topic_id, problem_id, revision_item_id, estimate_minutes, actual_minutes, status, output, completed_at, position, scheduled_date)
-     VALUES (?1,?2,?3,?4,?5,?6,NULL,?7,?8,NULL,'planned',NULL,NULL,?9,?10)",
-    params![id, plan_id, kind, title, track, topic_id, revision_item_id, estimate, position, date],
+     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,NULL,'planned',NULL,NULL,?10,?11)",
+    params![
+      id, plan_id, kind, title, track, topic_id, problem_id, revision_item_id, estimate, position, date
+    ],
   )?;
   Ok(id)
+}
+
+fn difficulty_estimate_minutes(difficulty: &str) -> i32 {
+  match difficulty {
+    "Easy" => 30,
+    "Medium" => 45,
+    "Hard" => 60,
+    _ => 45,
+  }
+}
+
+// Schedule individual DSA problems within the current new-learning category
+// (Tries onward) instead of one whole category topic per day. Picks as many
+// problems as fit in the remaining capacity, always at least one when any fit.
+fn schedule_dsa_problems(
+  conn: &rusqlite::Connection,
+  plan_id: &str,
+  date_str: &str,
+  position: &mut i32,
+  remaining: &mut i32,
+) -> rusqlite::Result<i32> {
+  // Current new-learning category: lowest ordered category (track B topic key
+  // B1..B18) that still has an unsolved problem not already on an open task.
+  let category_order: Option<i32> = conn
+    .query_row(
+      "SELECT MIN(CAST(SUBSTR(t.key, 2) AS INTEGER))
+       FROM problems p
+       JOIN topics t ON t.title = p.category
+       JOIN modules m ON t.module_id = m.id
+       JOIN tracks tr ON m.track_id = tr.id AND tr.key = 'b'
+       WHERE p.is_previously_covered = 0
+         AND NOT EXISTS (
+           SELECT 1 FROM problem_attempts a
+           WHERE a.problem_id = p.id AND a.outcome = 'solved'
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM study_tasks st
+           WHERE st.problem_id = p.id AND st.status != 'done'
+         )",
+      [],
+      |row| row.get(0),
+    )
+    .optional()
+    .unwrap_or(None);
+
+  let Some(co) = category_order else {
+    return Ok(0);
+  };
+
+  let category_topic_id: Option<String> = conn
+    .query_row(
+      "SELECT id FROM topics WHERE key = ?1 LIMIT 1",
+      params![format!("B{}", co)],
+      |row| row.get(0),
+    )
+    .optional()
+    .unwrap_or(None);
+
+  // Problems already planned for this day count toward "at least one per day";
+  // we only force a first problem into a small remaining slot when the day is
+  // otherwise empty of DSA work.
+  let existing_dsa: i32 = conn
+    .query_row(
+      "SELECT COUNT(*) FROM study_tasks
+       WHERE scheduled_date = ?1 AND problem_id IS NOT NULL AND status != 'done'",
+      params![date_str],
+      |r| r.get(0),
+    )
+    .unwrap_or(0);
+
+  let mut stmt = conn.prepare(
+    "SELECT p.id, p.title, p.difficulty
+     FROM problems p
+     JOIN topics t ON t.title = p.category
+     JOIN modules m ON t.module_id = m.id
+     JOIN tracks tr ON m.track_id = tr.id AND tr.key = 'b'
+     WHERE CAST(SUBSTR(t.key, 2) AS INTEGER) = ?1
+       AND p.is_previously_covered = 0
+       AND NOT EXISTS (
+         SELECT 1 FROM problem_attempts a
+         WHERE a.problem_id = p.id AND a.outcome = 'solved'
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM study_tasks st
+         WHERE st.problem_id = p.id AND st.status != 'done'
+       )
+     ORDER BY p.official_order",
+  )?;
+  let problems: Vec<(String, String, String)> = stmt
+    .query_map(params![co], |row| {
+      Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, String>(1)?,
+        row.get::<_, String>(2)?,
+      ))
+    })?
+    .flatten()
+    .collect();
+
+  let mut created = 0;
+  let mut dsa_count = existing_dsa;
+  for (pid, title, difficulty) in problems {
+    let estimate = difficulty_estimate_minutes(&difficulty);
+    let can_schedule = (dsa_count == 0 && *remaining >= 15) || *remaining >= estimate;
+    if !can_schedule {
+      break;
+    }
+    insert_task(
+      conn,
+      plan_id,
+      date_str,
+      "planned",
+      &title,
+      "b",
+      category_topic_id.as_deref(),
+      None,
+      Some(&pid),
+      estimate,
+      *position,
+    )?;
+    created += 1;
+    dsa_count += 1;
+    *position += 1;
+    *remaining -= estimate;
+  }
+  Ok(created)
+}
+
+fn record_problem_solved(
+  conn: &rusqlite::Connection,
+  problem_id: &str,
+  attempt_date: &str,
+  duration_minutes: i32,
+  study_task_id: Option<&str>,
+) -> rusqlite::Result<()> {
+  let already_solved: i32 = conn
+    .query_row(
+      "SELECT COUNT(*) FROM problem_attempts
+       WHERE problem_id = ?1 AND outcome = 'solved'",
+      params![problem_id],
+      |r| r.get(0),
+    )
+    .unwrap_or(0);
+  if already_solved > 0 {
+    return Ok(());
+  }
+  let attempt_id = Uuid::new_v4().to_string();
+  let now = now_rfc3339();
+  conn.execute(
+    "INSERT INTO problem_attempts
+     (id, problem_id, attempt_date, outcome, duration_minutes, notes, code_file, complexity_note,
+      edge_cases, interview_explanation, created_at, study_task_id)
+     VALUES (?1,?2,?3,'solved',?4,NULL,NULL,NULL,NULL,NULL,?5,?6)",
+    params![attempt_id, problem_id, attempt_date, duration_minutes, now, study_task_id],
+  )?;
+  let existing: Option<String> = conn
+    .query_row(
+      "SELECT id FROM revision_items
+       WHERE source_type = 'problem' AND source_id = ?1",
+      params![problem_id],
+      |r| r.get(0),
+    )
+    .optional()
+    .unwrap_or(None);
+  if existing.is_none() {
+    let next_due = (chrono::Local::now().date_naive() + Duration::days(1))
+      .format("%Y-%m-%d")
+      .to_string();
+    conn.execute(
+      "INSERT INTO revision_items
+       (id, source_type, source_id, initial_completion_date, last_reviewed_date,
+        next_due_date, current_interval, repetition, state, recall_result,
+        confidence, notes, created_at, updated_at)
+       VALUES (?1,'problem',?2,?3,NULL,?4,1,1,'reviewing',NULL,NULL,NULL,?5,?5)",
+      params![
+        Uuid::new_v4().to_string(),
+        problem_id,
+        attempt_date,
+        next_due,
+        now
+      ],
+    )?;
+  }
+  Ok(())
+}
+
+fn clear_problem_solved_for_task(
+  conn: &rusqlite::Connection,
+  problem_id: &str,
+  study_task_id: &str,
+) -> rusqlite::Result<()> {
+  conn.execute(
+    "DELETE FROM problem_attempts
+     WHERE study_task_id = ?1 AND outcome = 'solved'",
+    params![study_task_id],
+  )?;
+  let remaining: i32 = conn
+    .query_row(
+      "SELECT COUNT(*) FROM problem_attempts
+       WHERE problem_id = ?1 AND outcome = 'solved'",
+      params![problem_id],
+      |r| r.get(0),
+    )
+    .unwrap_or(0);
+  if remaining == 0 {
+    conn.execute(
+      "DELETE FROM revision_items
+       WHERE source_type = 'problem' AND source_id = ?1",
+      params![problem_id],
+    )?;
+  }
+  Ok(())
 }
 
 fn generate_day(
@@ -454,10 +683,15 @@ fn generate_day(
   let tracks = cadence_for(settings, iso);
   let mut created = 0;
   let mut position = 0;
-  let mut remaining = usable;
+  // Account for tasks that survive regeneration (completed/skipped/custom work).
+  let mut remaining = (usable - day_load(conn, &date_str)).max(0);
+  if remaining < 15 {
+    return Ok(0);
+  }
 
   // Weekly review day.
   if tracks.iter().any(|t| t.eq_ignore_ascii_case("review")) {
+    let est = 30.min(remaining).max(15);
     insert_task(
       conn,
       &plan_id,
@@ -467,11 +701,12 @@ fn generate_day(
       "review",
       None,
       None,
-      30.min(remaining.max(15)),
+      None,
+      est,
       position,
     )?;
     created += 1;
-    remaining -= 30;
+    remaining -= est;
     position += 1;
   }
 
@@ -486,6 +721,22 @@ fn generate_day(
       break;
     }
     if let Some(track_key) = track_key_for_handle(handle) {
+      // DSA is scheduled problem-by-problem within the current new-learning
+      // category instead of as one whole category topic.
+      if track_key == "b" {
+        let added = schedule_dsa_problems(
+          conn,
+          &plan_id,
+          &date_str,
+          &mut position,
+          &mut remaining,
+        )?;
+        if added > 0 {
+          created += added;
+          primary_added = true;
+        }
+        continue;
+      }
       if let Some((topic_id, title, estimate)) = next_new_topic(conn, track_key) {
         let est = estimate.min(remaining).max(15);
         insert_task(
@@ -496,6 +747,7 @@ fn generate_day(
           &title,
           track_key,
           Some(&topic_id),
+          None,
           None,
           est,
           position,
@@ -522,6 +774,7 @@ fn generate_day(
           &title,
           fallback,
           Some(&topic_id),
+          None,
           None,
           est,
           position,
@@ -555,6 +808,7 @@ fn generate_day(
     if remaining < 20 {
       break;
     }
+    let est = 25.min(remaining).max(15);
     insert_task(
       conn,
       &plan_id,
@@ -564,12 +818,13 @@ fn generate_day(
       "revision",
       None,
       Some(&rev_id),
-      25.min(remaining).max(15),
+      None,
+      est,
       position,
     )?;
     created += 1;
     position += 1;
-    remaining -= 25;
+    remaining -= est;
   }
 
   // Optional stretch only if there is meaningful capacity left.
@@ -585,6 +840,7 @@ fn generate_day(
           &title,
           track_key,
           Some(&topic_id),
+          None,
           None,
           45.min(remaining),
           position,
@@ -645,6 +901,43 @@ pub async fn get_agenda(date: String) -> AgendaResponse {
     due_revisions,
     planned_minutes,
     completed_minutes,
+    error: None,
+  }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_overdue_tasks(today: String) -> OverdueTasksResponse {
+  let conn = match open_connection() {
+    Ok(c) => c,
+    Err(e) => {
+      return OverdueTasksResponse {
+        ok: false,
+        tasks: vec![],
+        error: Some(e.to_string()),
+      }
+    }
+  };
+  let mut stmt = match conn.prepare(&format!(
+    "SELECT {TASK_COLUMNS} FROM study_tasks
+     WHERE scheduled_date < ?1 AND status IN ('planned', 'skipped')
+     ORDER BY scheduled_date, position"
+  )) {
+    Ok(s) => s,
+    Err(e) => {
+      return OverdueTasksResponse {
+        ok: false,
+        tasks: vec![],
+        error: Some(e.to_string()),
+      }
+    }
+  };
+  let tasks: Vec<StudyTask> = stmt
+    .query_map(params![today], row_to_task)
+    .map(|rows| rows.flatten().collect())
+    .unwrap_or_default();
+  OverdueTasksResponse {
+    ok: true,
+    tasks,
     error: None,
   }
 }
@@ -890,6 +1183,12 @@ pub async fn update_study_task(req: UpdateTaskRequest) -> UpdateTaskResponse {
         params![now_rfc3339(), topic_id],
       );
     }
+
+    // Record the completed DSA problem as solved so the scheduler advances to
+    // the next problem/category. Never duplicate an existing solved attempt.
+    if let Some(problem_id) = &task.problem_id {
+      let _ = record_problem_solved(&conn, problem_id, &task.scheduled_date, minutes, Some(&task.id));
+    }
   } else if was_done {
     // Undo: drop the completion event and release the topic back to Not started
     // unless another task for it is still done.
@@ -897,6 +1196,10 @@ pub async fn update_study_task(req: UpdateTaskRequest) -> UpdateTaskResponse {
       "DELETE FROM activity_events WHERE source_id = ?1 AND event_type = 'task_done'",
       params![task.id],
     );
+    // Remove the auto-created solved attempt for this task's problem (if any).
+    if let Some(problem_id) = &task.problem_id {
+      let _ = clear_problem_solved_for_task(&conn, problem_id, task.id.as_str());
+    }
     if let Some(topic_id) = &task.topic_id {
       let remaining_done: i32 = conn
         .query_row(
@@ -959,7 +1262,7 @@ pub async fn create_study_task(req: CreateTaskRequest) -> CreateTaskResponse {
   };
   let position = tasks_for_date(&conn, &req.scheduled_date).len() as i32;
   let kind = req.kind.unwrap_or_else(|| "custom".to_string());
-  match insert_task(
+    match insert_task(
     &conn,
     &plan_id,
     &req.scheduled_date,
@@ -967,6 +1270,7 @@ pub async fn create_study_task(req: CreateTaskRequest) -> CreateTaskResponse {
     &req.title,
     &req.track,
     req.topic_id.as_deref(),
+    None,
     None,
     req.estimate_minutes.unwrap_or(30),
     position,
@@ -982,6 +1286,77 @@ pub async fn create_study_task(req: CreateTaskRequest) -> CreateTaskResponse {
       error: Some(e.to_string()),
     },
   }
+}
+
+/// Redistribute unfinished work from dates before `today` across the next
+/// `horizon_days` available days by remaining capacity. Returns
+/// `(moved, unplaced)`. Skipped tasks are treated as missed (the user deferred
+/// them) and are reset to `planned` when moved.
+fn replan_missed(
+  conn: &rusqlite::Connection,
+  today: chrono::NaiveDate,
+  horizon_days: i64,
+  settings: &Settings,
+) -> rusqlite::Result<(i32, i32)> {
+  let capacity = per_day_capacity_minutes(settings);
+  let horizon = horizon_days.clamp(1, 60);
+  let mut days: Vec<String> = Vec::new();
+  let mut load: HashMap<String, i32> = HashMap::new();
+  for offset in 0..horizon {
+    let date = today + Duration::days(offset);
+    let date_str = date.format("%Y-%m-%d").to_string();
+    let computed_available = is_available(settings, iso_weekday(date));
+    let plan_capacity = if computed_available { capacity } else { 0 };
+    let _ = ensure_daily_plan(conn, &date_str, computed_available, plan_capacity);
+    // Respect an existing plan (a user may have marked the day unavailable).
+    let available = load_plan(conn, &date_str)
+      .map(|p| p.available)
+      .unwrap_or(computed_available);
+    if available {
+      load.insert(date_str.clone(), day_load(conn, &date_str));
+      days.push(date_str);
+    }
+  }
+
+  let today_str = today.format("%Y-%m-%d").to_string();
+  let overdue: Vec<(String, i32)> = {
+    let mut stmt = conn.prepare(
+      "SELECT id, estimate_minutes FROM study_tasks
+       WHERE status IN ('planned', 'skipped') AND scheduled_date < ?1
+       ORDER BY scheduled_date, position",
+    )?;
+    let rows = stmt.query_map(params![today_str], |row| {
+      Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
+    })?;
+    rows.flatten().collect()
+  };
+
+  let mut moved = 0;
+  let mut unplaced = 0;
+  for (task_id, estimate) in overdue {
+    let mut placed = false;
+    for day in &days {
+      let current = *load.get(day).unwrap_or(&0);
+      if current + estimate <= capacity {
+        conn.execute(
+          "UPDATE study_tasks
+           SET scheduled_date = ?1,
+               daily_plan_id = (SELECT id FROM daily_plans WHERE plan_date = ?1),
+               status = 'planned'
+           WHERE id = ?2",
+          params![day, task_id],
+        )?;
+        load.insert(day.clone(), current + estimate);
+        moved += 1;
+        placed = true;
+        break;
+      }
+    }
+    if !placed {
+      unplaced += 1;
+    }
+  }
+  Ok((moved, unplaced))
 }
 
 #[tauri::command]
@@ -1024,76 +1399,17 @@ pub async fn replan_backlog(req: ReplanRequest) -> ReplanResponse {
     }
   };
 
-  let capacity = per_day_capacity_minutes(&settings);
-  let horizon = req.horizon_days.clamp(1, 60);
-  let mut days: Vec<String> = Vec::new();
-  let mut load: HashMap<String, i32> = HashMap::new();
-  for offset in 0..horizon {
-    let date = today + Duration::days(offset);
-    let date_str = date.format("%Y-%m-%d").to_string();
-    let computed_available = is_available(&settings, iso_weekday(date));
-    let plan_capacity = if computed_available { capacity } else { 0 };
-    let _ = ensure_daily_plan(&tx, &date_str, computed_available, plan_capacity);
-    // Respect an existing plan (a user may have marked the day unavailable).
-    let available = load_plan(&tx, &date_str)
-      .map(|p| p.available)
-      .unwrap_or(computed_available);
-    if available {
-      load.insert(date_str.clone(), day_load(&tx, &date_str));
-      days.push(date_str);
-    }
-  }
-
-  let today_str = today.format("%Y-%m-%d").to_string();
-  let overdue: Vec<(String, i32)> = {
-    let mut stmt = match tx.prepare(
-      "SELECT id, estimate_minutes FROM study_tasks
-       WHERE status = 'planned' AND scheduled_date < ?1
-       ORDER BY scheduled_date, position",
-    ) {
-      Ok(s) => s,
-      Err(e) => {
-        return ReplanResponse {
-          ok: false,
-          moved: 0,
-          unplaced: 0,
-          error: Some(e.to_string()),
-        }
+  let (moved, unplaced) = match replan_missed(&tx, today, req.horizon_days, &settings) {
+    Ok(v) => v,
+    Err(e) => {
+      return ReplanResponse {
+        ok: false,
+        moved: 0,
+        unplaced: 0,
+        error: Some(e.to_string()),
       }
-    };
-    stmt
-      .query_map(params![today_str], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
-      })
-      .map(|rows| rows.flatten().collect())
-      .unwrap_or_default()
+    }
   };
-
-  let mut moved = 0;
-  let mut unplaced = 0;
-  for (task_id, estimate) in overdue {
-    let mut placed = false;
-    for day in &days {
-      let current = *load.get(day).unwrap_or(&0);
-      if current + estimate <= capacity {
-        if tx
-          .execute(
-            "UPDATE study_tasks SET scheduled_date = ?1, daily_plan_id = (SELECT id FROM daily_plans WHERE plan_date = ?1) WHERE id = ?2",
-            params![day, task_id],
-          )
-          .is_ok()
-        {
-          load.insert(day.clone(), current + estimate);
-          moved += 1;
-          placed = true;
-          break;
-        }
-      }
-    }
-    if !placed {
-      unplaced += 1;
-    }
-  }
 
   if let Err(e) = tx.commit() {
     return ReplanResponse {
@@ -1354,7 +1670,11 @@ mod tests {
       [],
     )
     .unwrap();
-    for (key, title) in [("A1", "Topic one"), ("A2", "Topic two")] {
+    for (key, title) in [
+      ("A1", "Topic one"),
+      ("A2", "Topic two"),
+      ("A10", "Topic ten"),
+    ] {
       conn.execute(
         "INSERT INTO topics (id, module_id, key, title, status, priority, estimate_minutes, is_custom, created_at, updated_at)
          VALUES (?1, 'mod-a', ?2, ?3, 'Not started', 'High', 60, 0, 'now', 'now')",
@@ -1387,5 +1707,300 @@ mod tests {
     let created_rest = generate_day(&conn, date("2026-01-06"), &settings, &mut warnings).unwrap();
     assert_eq!(created_rest, 0);
     assert_eq!(tasks_for_date(&conn, "2026-01-06").len(), before);
+  }
+
+  #[test]
+  fn regeneration_refreshes_auto_capacity_and_preserves_manual_override() {
+    let conn = seeded_conn();
+    let mut settings = Settings::default();
+    settings.weekly_capacity_hours = Some(7.5);
+
+    let id = ensure_daily_plan(
+      &conn,
+      "2026-01-05",
+      true,
+      per_day_capacity_minutes(&settings),
+    )
+    .unwrap();
+    let cap1: i32 = conn
+      .query_row(
+        "SELECT capacity_minutes FROM daily_plans WHERE id = ?1",
+        params![id],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(cap1, 75, "7.5h/week over 6 study days = 75 min/day");
+
+    // Changing weekly hours must refresh the auto-generated plan capacity.
+    settings.weekly_capacity_hours = Some(12.0);
+    ensure_daily_plan(
+      &conn,
+      "2026-01-05",
+      true,
+      per_day_capacity_minutes(&settings),
+    )
+    .unwrap();
+    let cap2: i32 = conn
+      .query_row(
+        "SELECT capacity_minutes FROM daily_plans WHERE id = ?1",
+        params![id],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(cap2, 120, "12h/week over 6 study days = 120 min/day");
+
+    // A manual override must not be overwritten by regeneration.
+    upsert_plan(&conn, "2026-01-05", true, 90, None).unwrap();
+    ensure_daily_plan(&conn, "2026-01-05", true, 45).unwrap();
+    let cap3: i32 = conn
+      .query_row(
+        "SELECT capacity_minutes FROM daily_plans WHERE id = ?1",
+        params![id],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(cap3, 90);
+  }
+
+  #[test]
+  fn next_new_topic_uses_natural_key_order() {
+    let conn = seeded_conn();
+    // A1 is first, not A10 (lexicographic would put A10 before A2).
+    assert_eq!(next_new_topic(&conn, "a").unwrap().1, "Topic one");
+
+    // Once A1 is already on a task, the next topic is A2 — not A10.
+    let plan = ensure_daily_plan(&conn, "2026-01-05", true, 75).unwrap();
+    insert_task(
+      &conn,
+      &plan,
+      "2026-01-05",
+      "planned",
+      "Topic one",
+      "a",
+      Some("topic-A1"),
+      None,
+      None,
+      60,
+      0,
+    )
+    .unwrap();
+    assert_eq!(next_new_topic(&conn, "a").unwrap().1, "Topic two");
+  }
+
+  #[test]
+  fn replan_moves_overdue_planned_and_skipped_tasks() {
+    let conn = seeded_conn();
+    let settings = Settings::default();
+
+    let old_plan = ensure_daily_plan(
+      &conn,
+      "2026-01-05",
+      true,
+      per_day_capacity_minutes(&settings),
+    )
+    .unwrap();
+    let planned_id = insert_task(
+      &conn,
+      &old_plan,
+      "2026-01-05",
+      "planned",
+      "Planned overdue",
+      "a",
+      Some("topic-A1"),
+      None,
+      None,
+      30,
+      0,
+    )
+    .unwrap();
+    let skipped_id = insert_task(
+      &conn,
+      &old_plan,
+      "2026-01-05",
+      "planned",
+      "Skipped overdue",
+      "a",
+      Some("topic-A2"),
+      None,
+      None,
+      30,
+      1,
+    )
+    .unwrap();
+    conn.execute(
+      "UPDATE study_tasks SET status = 'skipped' WHERE id = ?1",
+      params![skipped_id],
+    )
+    .unwrap();
+
+    let (moved, unplaced) =
+      replan_missed(&conn, date("2026-01-06"), 14, &settings).unwrap();
+    assert_eq!(moved, 2, "both overdue planned and skipped tasks should move");
+    assert_eq!(unplaced, 0);
+
+    for id in [&planned_id, &skipped_id] {
+      let (status, new_date): (String, String) = conn
+        .query_row(
+          "SELECT status, scheduled_date FROM study_tasks WHERE id = ?1",
+          params![id],
+          |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+      assert_eq!(status, "planned", "replanned tasks return to planned");
+      assert!(new_date.as_str() >= "2026-01-06");
+    }
+  }
+
+  fn dsa_seeded_conn() -> rusqlite::Connection {
+    let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+    crate::migrations::ensure_schema(&mut conn).unwrap();
+    let now = "now";
+    conn.execute(
+      "INSERT INTO tracks (id, key, name, description, position, created_at) VALUES (?1,'b','DSA',NULL,2,?2)",
+      params!["tr-b", now],
+    ).unwrap();
+    conn.execute(
+      "INSERT INTO modules (id, track_id, key, name, position) VALUES (?1,'tr-b','B','NeetCode 250',1)",
+      params!["mod-b"],
+    ).unwrap();
+    for (key, title) in [("B8", "Tries"), ("B9", "Backtracking")] {
+      conn.execute(
+        "INSERT INTO topics (id, module_id, key, title, status, priority, estimate_minutes, is_custom, created_at, updated_at)
+         VALUES (?1,'mod-b',?2,?3,'Not started','Medium',NULL,0,'now','now')",
+        params![format!("topic-{key}"), key, title],
+      ).unwrap();
+    }
+    let problems = [
+      ("p-1", "tries-1", "Implement Trie", "Tries", "Easy", 100),
+      ("p-2", "tries-2", "Add and Search Word", "Tries", "Medium", 101),
+      ("p-3", "tries-3", "Design Prefix", "Tries", "Hard", 102),
+      ("p-4", "tries-4", "Longest Word", "Tries", "Easy", 103),
+      ("p-5", "bt-1", "N-Queens", "Backtracking", "Easy", 200),
+    ];
+    for (id, ext, title, category, difficulty, order) in problems {
+      conn.execute(
+        "INSERT INTO problems (id, external_id, title, category, difficulty, url, official_order, statement, constraints, tags, is_previously_covered, created_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,NULL,NULL,NULL,0,'now')",
+        params![id, ext, title, category, difficulty, format!("https://x/{ext}"), order],
+      ).unwrap();
+    }
+    conn
+  }
+
+  #[test]
+  fn dsa_schedules_individual_problems_in_category_order() {
+    let conn = dsa_seeded_conn();
+    let settings = Settings::default();
+    let mut warnings = Vec::new();
+
+    // Monday 2026-01-05 is a DSA day (cadence day 1 = dsa).
+    let created = generate_day(&conn, date("2026-01-05"), &settings, &mut warnings).unwrap();
+    assert!(created >= 1, "expected at least one DSA problem on a DSA day");
+    let tasks = tasks_for_date(&conn, "2026-01-05");
+    assert_eq!(tasks.len(), 1, "should schedule one problem, not the whole category");
+    assert_eq!(tasks[0].track, "b");
+    assert_eq!(tasks[0].title, "Implement Trie");
+    assert_eq!(tasks[0].problem_id.as_deref(), Some("p-1"));
+
+    // Medium (45 min) does not fit in remaining capacity (64 - 30 = 34) today.
+    let created_wed = generate_day(&conn, date("2026-01-07"), &settings, &mut warnings).unwrap();
+    let wed_tasks = tasks_for_date(&conn, "2026-01-07");
+    assert_eq!(wed_tasks.len(), 1);
+    assert_eq!(wed_tasks[0].title, "Add and Search Word");
+    assert_eq!(wed_tasks[0].problem_id.as_deref(), Some("p-2"));
+
+    // Re-generating the same day does not duplicate an open task.
+    assert_eq!(
+      generate_day(&conn, date("2026-01-07"), &settings, &mut warnings).unwrap(),
+      0
+    );
+  }
+
+  #[test]
+  fn dsa_completion_advances_to_next_category() {
+    let conn = dsa_seeded_conn();
+    let settings = Settings::default();
+    let mut warnings = Vec::new();
+
+    // Schedule all three Tries problems over successive DSA days.
+    generate_day(&conn, date("2026-01-05"), &settings, &mut warnings).unwrap();
+    generate_day(&conn, date("2026-01-07"), &settings, &mut warnings).unwrap();
+    generate_day(&conn, date("2026-01-09"), &settings, &mut warnings).unwrap();
+
+    // Mark each Tries problem solved (simulates completing its task).
+    for pid in ["p-1", "p-2", "p-3", "p-4"] {
+      record_problem_solved(&conn, pid, "2026-01-09", 30, None).unwrap();
+      // Calling twice must not create a duplicate solved attempt.
+      record_problem_solved(&conn, pid, "2026-01-09", 30, None).unwrap();
+      let solved: i32 = conn
+        .query_row(
+          "SELECT COUNT(*) FROM problem_attempts WHERE problem_id = ?1 AND outcome = 'solved'",
+          params![pid],
+          |r| r.get(0),
+        )
+        .unwrap();
+      assert_eq!(solved, 1, "{pid} should have exactly one solved attempt");
+      let rev: Option<String> = conn
+        .query_row(
+          "SELECT id FROM revision_items WHERE source_type = 'problem' AND source_id = ?1",
+          params![pid],
+          |r| r.get(0),
+        )
+        .optional()
+        .unwrap();
+      assert!(rev.is_some(), "{pid} should seed a revision item");
+    }
+
+    // All Tries problems solved → next DSA day moves to Backtracking.
+    generate_day(&conn, date("2026-01-12"), &settings, &mut warnings).unwrap();
+    let next_tasks = tasks_for_date(&conn, "2026-01-12");
+    assert_eq!(next_tasks.len(), 1);
+    assert_eq!(next_tasks[0].title, "N-Queens");
+    assert_eq!(next_tasks[0].problem_id.as_deref(), Some("p-5"));
+  }
+
+  #[test]
+  fn dsa_undo_removes_solved_attempt() {
+    let conn = dsa_seeded_conn();
+    let task_id = "task-p1";
+
+    record_problem_solved(&conn, "p-1", "2026-01-05", 30, Some(task_id)).unwrap();
+    let solved: i32 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM problem_attempts WHERE problem_id = 'p-1' AND outcome = 'solved'",
+        [],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(solved, 1);
+    let rev: Option<String> = conn
+      .query_row(
+        "SELECT id FROM revision_items WHERE source_type = 'problem' AND source_id = 'p-1'",
+        [],
+        |r| r.get(0),
+      )
+      .optional()
+      .unwrap();
+    assert!(rev.is_some());
+
+    clear_problem_solved_for_task(&conn, "p-1", task_id).unwrap();
+    let solved: i32 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM problem_attempts WHERE problem_id = 'p-1' AND outcome = 'solved'",
+        [],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(solved, 0);
+    let rev: Option<String> = conn
+      .query_row(
+        "SELECT id FROM revision_items WHERE source_type = 'problem' AND source_id = 'p-1'",
+        [],
+        |r| r.get(0),
+      )
+      .optional()
+      .unwrap();
+    assert!(rev.is_none());
   }
 }

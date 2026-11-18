@@ -20,6 +20,7 @@ import {
   WeeklyPlanItemsResponse,
   ImportRoadmapResponse,
   AgendaResponse,
+  OverdueTasksResponse,
   GenerateWeekResponse,
   UpdateTaskRequest,
   UpdateTaskResponse,
@@ -32,6 +33,24 @@ import {
   CreateLearningEntryResponse,
   ListEntriesResponse,
   ActivitySummaryResponse,
+  PreviewNeetcodeResponse,
+  ImportNeetcodeResponse,
+  ProblemListResponse,
+  GetProblemsRequest,
+  RecordAttemptRequest,
+  RecordAttemptResponse,
+  ListAttemptsResponse,
+  SaveSolutionRequest,
+  SaveSolutionResponse,
+  GetSolutionResponse,
+  RecordReviewRequest,
+  RecordReviewResponse,
+  GetRevisionQueueResponse,
+  StartRevisionBaselineResponse,
+  GetDsaProgressResponse,
+  ToggleFavoriteRequest,
+  ToggleFavoriteResponse,
+  OpenUrlResponse,
 } from '@/types'
 
 declare global {
@@ -131,6 +150,8 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
       return { ok: true, id: null, error: undefined } as T
     case 'replan_backlog':
       return { ok: true, moved: 0, unplaced: 0, error: undefined } as T
+    case 'list_overdue_tasks':
+      return { ok: true, tasks: [], error: undefined } as T
     case 'get_week_review':
       return {
         ok: true,
@@ -160,6 +181,46 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
         min_meaningful_minutes: 15,
         error: undefined,
       } as T
+    case 'preview_neetcode':
+    case 'import_neetcode':
+      return {
+        ok: true,
+        imported: 0,
+        skipped: 0,
+        previously_covered: 0,
+        new_learning: 0,
+        warnings: [],
+        error: undefined,
+      } as T
+    case 'get_problems':
+      return { ok: true, problems: [], total: 0, error: undefined } as T
+    case 'record_attempt':
+      return { ok: true, id: '', error: undefined } as T
+    case 'list_attempts':
+      return { ok: true, attempts: [], error: undefined } as T
+    case 'save_solution':
+      return { ok: true, file_path: '', error: undefined } as T
+    case 'get_solution':
+      return { ok: true, solution: null, error: undefined } as T
+    case 'record_review':
+      return { ok: true, revision_item: null, error: undefined } as T
+    case 'get_revision_queue':
+      return { ok: true, items: [], error: undefined } as T
+    case 'start_revision_baseline':
+      return { ok: true, created: 0, error: undefined } as T
+    case 'get_dsa_progress':
+      return {
+        ok: true,
+        categories: [],
+        total_problems: 0,
+        total_attempted: 0,
+        total_solved: 0,
+        error: undefined,
+      } as T
+    case 'toggle_favorite':
+      return { ok: true, is_favorite: false, error: undefined } as T
+    case 'open_external_url':
+      return { ok: true, error: undefined } as T
     default:
       throw new Error(`Unknown command: ${cmd}`)
   }
@@ -200,6 +261,8 @@ export const api = {
 
   // Planner
   getAgenda: (date: string) => invoke<AgendaResponse>('get_agenda', { date }),
+  listOverdueTasks: (today: string) =>
+    invoke<OverdueTasksResponse>('list_overdue_tasks', { today }),
   generateWeek: (weekStart: string, force = false) =>
     invoke<GenerateWeekResponse>('generate_week', { req: { week_start: weekStart, force } }),
   setDayAvailability: (req: SetAvailabilityRequest) =>
@@ -226,4 +289,32 @@ export const api = {
     invoke<ListEntriesResponse>('list_learning_entries', { req: { from, to } }),
   getActivitySummary: (from: string, to: string, today: string) =>
     invoke<ActivitySummaryResponse>('get_activity_summary', { req: { from, to, today } }),
+
+  // DSA / NeetCode 250
+  previewNeetcode: (content: string) =>
+    invoke<PreviewNeetcodeResponse>('preview_neetcode', { req: { content } }),
+  importNeetcode: (content: string) =>
+    invoke<ImportNeetcodeResponse>('import_neetcode', { req: { content } }),
+  getProblems: (req: GetProblemsRequest) =>
+    invoke<ProblemListResponse>('get_problems', { req }),
+  recordAttempt: (req: RecordAttemptRequest) =>
+    invoke<RecordAttemptResponse>('record_attempt', { req }),
+  listAttempts: (problemId: string) =>
+    invoke<ListAttemptsResponse>('list_attempts', { req: { search: problemId } }),
+  saveSolution: (req: SaveSolutionRequest) =>
+    invoke<SaveSolutionResponse>('save_solution', { req }),
+  getSolution: (problemId: string) =>
+    invoke<GetSolutionResponse>('get_solution', { req: { search: problemId } }),
+  recordReview: (req: RecordReviewRequest) =>
+    invoke<RecordReviewResponse>('record_review', { req }),
+  getRevisionQueue: () =>
+    invoke<GetRevisionQueueResponse>('get_revision_queue', { req: {} }),
+  startRevisionBaseline: () =>
+    invoke<StartRevisionBaselineResponse>('start_revision_baseline', { req: {} }),
+  getDsaProgress: () =>
+    invoke<GetDsaProgressResponse>('get_dsa_progress', { req: {} }),
+  toggleFavorite: (req: ToggleFavoriteRequest) =>
+    invoke<ToggleFavoriteResponse>('toggle_favorite', { req }),
+  openExternalUrl: (url: string) =>
+    invoke<OpenUrlResponse>('open_external_url', { url }),
 }

@@ -141,6 +141,14 @@ describe('api service', () => {
     expect(mockInvoke).toHaveBeenCalledWith('get_agenda', { date: '2026-01-05' })
   })
 
+  it('listOverdueTasks calls list_overdue_tasks with today', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, tasks: [] })
+    await api.listOverdueTasks('2026-01-08')
+    expect(mockInvoke).toHaveBeenCalledWith('list_overdue_tasks', {
+      today: '2026-01-08',
+    })
+  })
+
   it('generateWeek calls generate_week with snake_case request', async () => {
     mockInvoke.mockResolvedValue({ ok: true, tasks_created: 3, days_generated: 3, warnings: [] })
     await api.generateWeek('2026-01-05', true)
@@ -198,6 +206,82 @@ describe('api service', () => {
     await api.getActivitySummary('2026-01-01', '2026-01-31', '2026-01-05')
     expect(mockInvoke).toHaveBeenCalledWith('get_activity_summary', {
       req: { from: '2026-01-01', to: '2026-01-31', today: '2026-01-05' },
+    })
+  })
+
+  it('previewNeetcode calls preview_neetcode with content', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, total_rows: 250, valid_rows: 250, previously_covered: 109, new_learning: 141, by_category: [], sample: [], error: undefined })
+    await api.previewNeetcode('official_order,problem_id,title,url,category,difficulty,category_order,source_name,source_version\n1,a,T,https://x/a,Arrays & Hashing,Easy,1,NeetCode 250,2026-11-13')
+    expect(mockInvoke).toHaveBeenCalledWith('preview_neetcode', { req: { content: expect.any(String) } })
+  })
+
+  it('importNeetcode calls import_neetcode with content', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, imported: 250, skipped: 0, previously_covered: 109, new_learning: 141, warnings: [], error: undefined })
+    await api.importNeetcode('content')
+    expect(mockInvoke).toHaveBeenCalledWith('import_neetcode', { req: { content: 'content' } })
+  })
+
+  it('getProblems nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, problems: [], total: 0, error: undefined })
+    await api.getProblems({ category: 'Arrays & Hashing', cover_filter: 'new' })
+    expect(mockInvoke).toHaveBeenCalledWith('get_problems', {
+      req: { category: 'Arrays & Hashing', cover_filter: 'new' },
+    })
+  })
+
+  it('recordAttempt nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'attempt-1', error: undefined })
+    await api.recordAttempt({ problem_id: 'two-sum', attempt_date: '2026-01-05', outcome: 'solved', duration_minutes: 20 })
+    expect(mockInvoke).toHaveBeenCalledWith('record_attempt', {
+      req: { problem_id: 'two-sum', attempt_date: '2026-01-05', outcome: 'solved', duration_minutes: 20 },
+    })
+  })
+
+  it('listAttempts sends problem_id as search', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, attempts: [], error: undefined })
+    await api.listAttempts('two-sum')
+    expect(mockInvoke).toHaveBeenCalledWith('list_attempts', { req: { search: 'two-sum' } })
+  })
+
+  it('recordReview nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, revision_item: null, error: undefined })
+    await api.recordReview({ revision_item_id: 'ri-1', reviewed_at: '2026-01-06', recall_result: 'correct_clear', confidence: 4 })
+    expect(mockInvoke).toHaveBeenCalledWith('record_review', {
+      req: { revision_item_id: 'ri-1', reviewed_at: '2026-01-06', recall_result: 'correct_clear', confidence: 4 },
+    })
+  })
+
+  it('getRevisionQueue calls get_revision_queue', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, items: [], error: undefined })
+    await api.getRevisionQueue()
+    expect(mockInvoke).toHaveBeenCalledWith('get_revision_queue', { req: {} })
+  })
+
+  it('startRevisionBaseline calls start_revision_baseline', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, created: 0, error: undefined })
+    await api.startRevisionBaseline()
+    expect(mockInvoke).toHaveBeenCalledWith('start_revision_baseline', { req: {} })
+  })
+
+  it('getDsaProgress calls get_dsa_progress', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, categories: [], total_problems: 0, total_attempted: 0, total_solved: 0, error: undefined })
+    await api.getDsaProgress()
+    expect(mockInvoke).toHaveBeenCalledWith('get_dsa_progress', { req: {} })
+  })
+
+  it('toggleFavorite nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, is_favorite: true, error: undefined })
+    await api.toggleFavorite({ problem_id: 'p-1', favorite: true })
+    expect(mockInvoke).toHaveBeenCalledWith('toggle_favorite', {
+      req: { problem_id: 'p-1', favorite: true },
+    })
+  })
+
+  it('openExternalUrl sends the url', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, error: undefined })
+    await api.openExternalUrl('https://leetcode.com/problems/two-sum/')
+    expect(mockInvoke).toHaveBeenCalledWith('open_external_url', {
+      url: 'https://leetcode.com/problems/two-sum/',
     })
   })
 })

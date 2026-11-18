@@ -29,6 +29,45 @@ pub struct SaveSettingsResponse {
   pub ok: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OpenUrlResponse {
+  pub ok: bool,
+  pub error: Option<String>,
+}
+
+/// Open an external http(s) URL in the system browser. Only http/https are
+/// allowed, and the argument is passed directly (no shell) to avoid injection.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn open_external_url(url: String) -> OpenUrlResponse {
+  let trimmed = url.trim();
+  if !(trimmed.starts_with("https://") || trimmed.starts_with("http://")) {
+    return OpenUrlResponse {
+      ok: false,
+      error: Some("Only http(s) URLs can be opened".to_string()),
+    };
+  }
+
+  #[cfg(target_os = "macos")]
+  let spawned = std::process::Command::new("open").arg(trimmed).spawn();
+  #[cfg(target_os = "windows")]
+  let spawned = std::process::Command::new("cmd")
+    .args(["/C", "start", "", trimmed])
+    .spawn();
+  #[cfg(all(unix, not(target_os = "macos")))]
+  let spawned = std::process::Command::new("xdg-open").arg(trimmed).spawn();
+
+  match spawned {
+    Ok(_) => OpenUrlResponse {
+      ok: true,
+      error: None,
+    },
+    Err(e) => OpenUrlResponse {
+      ok: false,
+      error: Some(e.to_string()),
+    },
+  }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct BackupRequest {
   pub destination: String,
