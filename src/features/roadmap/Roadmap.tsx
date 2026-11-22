@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/services/api'
-import type { Track, Module, Topic, ImportRoadmapResponse } from '@/types'
+import type {
+  Track,
+  Module,
+  Topic,
+  ImportRoadmapResponse,
+  TopicDetailResponse,
+} from '@/types'
 
 type Page = 'roadmap' | 'settings' | 'dashboard' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 
@@ -35,8 +41,10 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
   const [expandedTracks, setExpandedTracks] = useState<Set<string>>(new Set())
   const [modulesByTrack, setModulesByTrack] = useState<Record<string, Module[]>>({})
   const [topicsByModule, setTopicsByModule] = useState<Record<string, Topic[]>>({})
-  const [loadingTrack, setLoadingTrack] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+const [loadingTrack, setLoadingTrack] = useState<string | null>(null)
+const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
+const [topicDetail, setTopicDetail] = useState<TopicDetailResponse | null>(null)
+const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadTracks = () => {
     api.getTracks()
@@ -89,6 +97,23 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
       if (!modulesByTrack[key]) loadTrackContent(key)
       return next
     })
+  }
+
+  const openTopicDetail = async (topic: Topic) => {
+    setSelectedTopic(topic)
+    setTopicDetail(null)
+    try {
+      const res = await api.getTopicDetail(topic.id)
+      if (res.ok) setTopicDetail(res)
+      else setError('Failed to load topic details')
+    } catch {
+      setError('Failed to load topic details')
+    }
+  }
+
+  const closeTopicDetail = () => {
+    setSelectedTopic(null)
+    setTopicDetail(null)
   }
 
   const handleImportClick = () => {
@@ -255,14 +280,15 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
                                 {topics.map((topic) => (
                                   <li
                                     key={topic.id}
-                                    className="flex items-center justify-between gap-3 px-3 py-2"
+                                    className="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 rounded-md"
+                                    onClick={() => openTopicDetail(topic)}
                                   >
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-2">
                                         <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                                           {topic.key}
                                         </span>
-                                        <span className="truncate text-sm">{topic.title}</span>
+                                        <span className="truncate text-sm font-medium">{topic.title}</span>
                                       </div>
                                       <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                                         <span>{topic.priority} priority</span>
@@ -305,6 +331,82 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
           Back to Dashboard
         </button>
       </div>
+
+      {selectedTopic && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeTopicDetail()
+          }}
+        >
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeTopicDetail} />
+          <div className="relative bg-background rounded-lg border border-border p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">{selectedTopic.key} — {selectedTopic.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedTopic.priority} priority
+                  {selectedTopic.estimate_minutes && (
+                    <span> · Est. {Math.round((selectedTopic.estimate_minutes / 60) * 10) / 10} h</span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={closeTopicDetail}
+                className="rounded-md border border-border px-2 py-1 text-sm hover:bg-muted"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 rounded border border-border bg-muted/50">
+                <h4 className="text-xs font-semibold mb-2">Details</h4>
+                <p className="text-sm text-muted-foreground">
+                  Status: {selectedTopic.status} · Priority: {selectedTopic.priority}
+                  {selectedTopic.estimate_minutes && (
+                    <span> · Est. {Math.round((selectedTopic.estimate_minutes / 60) * 10) / 10} h</span>
+                  )}
+                </p>
+              </div>
+
+              {topicDetail?.resources && topicDetail.resources.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold mb-2">📚 Resources</h4>
+                  <ul className="divide-y divide-border space-y-2">
+                    {topicDetail.resources.map((r) => (
+                      <li key={r.id} className="p-2 rounded border border-border bg-muted/40">
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-medium text-primary">{r.type ?? 'link'}</span>
+                          <div className="flex-1 min-w-0">
+                            <a
+                              href={r.url ?? '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline truncate block"
+                            >
+                              {r.title}
+                            </a>
+                            {r.url && (
+                              <span className="text-xs text-muted-foreground truncate block">
+                                {r.url}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {!topicDetail?.resources || topicDetail.resources.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No resources linked to this topic.</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -6,6 +6,7 @@ import type {
   StudyTask,
   ActivitySummaryResponse,
   LearningEntry,
+  Resource,
 } from '@/types'
 import {
   todayISO,
@@ -44,6 +45,20 @@ function trackLabel(track: string): string {
   return TRACK_LABEL[track] ?? track
 }
 
+function videoLinkForTask(
+  task: StudyTask,
+  topicResources: Record<string, Resource[]>,
+): { title: string; url: string } | null {
+  if (!task.topic_id) return null
+  const resources = topicResources[task.topic_id]
+  if (!resources) return null
+  const video = resources.find(
+    (r: Resource) => r.type === 'link' && r.url && /youtube\.com|youtu\.be/.test(r.url),
+  )
+  if (!video || !video.url) return null
+  return { title: video.title, url: video.url }
+}
+
 export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const [today] = useState(todayISO())
   const [viewDate, setViewDate] = useState(today)
@@ -57,6 +72,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [actuals, setActuals] = useState<Record<string, number>>({})
+  const [topicResources, setTopicResources] = useState<Record<string, Resource[]>>({})
 
   const [showEntry, setShowEntry] = useState(false)
   const [entryTitle, setEntryTitle] = useState('')
@@ -92,6 +108,24 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
     }
     if (activityRes?.ok) setActivity(activityRes)
     if (entriesRes?.ok) setEntries(entriesRes.entries)
+
+    // Fetch topic resources (video/playlist links) for tasks with topic_id
+    const topicIds = new Set<string>()
+    for (const t of [...(agendaRes?.tasks ?? []), ...(overdueRes?.tasks ?? [])]) {
+      if (t.topic_id) topicIds.add(t.topic_id)
+    }
+    if (topicIds.size > 0) {
+      const results = await Promise.all(
+        Array.from(topicIds).map((topicId) => api.getTopicDetail(topicId).catch(() => null)),
+      )
+      const newResources: Record<string, Resource[]> = {}
+      for (const res of results) {
+        if (res?.ok && res.topic) {
+          newResources[res.topic.id] = res.resources
+        }
+      }
+      setTopicResources(newResources)
+    }
   }, [today, viewDate])
 
   useEffect(() => {
@@ -333,6 +367,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
                         skipped
                       </span>
                     )}
+                    {videoLinkForTask(task, topicResources) && (
+                      <a
+                        href={videoLinkForTask(task, topicResources)!.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline ml-2"
+                        title="Watch video"
+                      >
+                        🎥
+                      </a>
+                    )}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {task.estimate_minutes} min planned
@@ -420,6 +465,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
                           >
                             {task.title}
                           </span>
+                          {videoLinkForTask(task, topicResources) && (
+                            <a
+                              href={videoLinkForTask(task, topicResources)!.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline ml-2"
+                              title="Watch video"
+                            >
+                              🎥
+                            </a>
+                          )}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {task.estimate_minutes} min planned
