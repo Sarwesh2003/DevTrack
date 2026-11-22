@@ -420,7 +420,7 @@ fn insert_topic(conn: &rusqlite::Connection, topic: &ParsedTopic) -> DbResult<St
   
   // Determine if previously covered based on progress overrides
   let (is_previously_covered, status) = if topic.key.starts_with('A') || topic.key.starts_with('D') || topic.key.starts_with('E') {
-    // Java, HLD, FDE start fresh
+    // Java, HLD, AI Upskilling start fresh
     (0, "Not started".to_string())
   } else if topic.key.starts_with('B') {
     // DSA: categories through Trees (B1-B7) are previously covered
@@ -707,7 +707,7 @@ mod tests {
     assert_eq!(keys, vec!["a", "b", "c", "d", "e"]);
 
     // Track B is guidance only; real DSA problems come from NeetCode.
-    assert_eq!(topics.len(), 37, "A(10) + C(7) + D(10) + E(10)");
+    assert_eq!(topics.len(), 41, "A(10) + C(7) + D(10) + E(14)");
     assert!(topics.iter().all(|t| !t.key.starts_with('B')));
 
     let a1 = topics.iter().find(|t| t.key == "A1").expect("A1 present");
@@ -728,7 +728,7 @@ mod tests {
     let first = run_import(&mut conn, ROADMAP);
     assert!(first.ok, "first import failed: {:?}", first.error);
     assert_eq!(first.track_count, 5);
-    assert_eq!(first.topic_count, 37);
+    assert_eq!(first.topic_count, 41);
     assert_eq!(first.week_count, 26);
 
     let phases: i64 = conn
@@ -742,7 +742,7 @@ mod tests {
       .unwrap();
     assert_eq!(phases, 6);
     assert_eq!(weeks, 26);
-    assert_eq!(topic_rows, 37);
+    assert_eq!(topic_rows, 41);
 
     // A second import must not fail on foreign keys or duplicate rows.
     let second = run_import(&mut conn, ROADMAP);
@@ -759,6 +759,6 @@ mod tests {
       .unwrap();
     assert_eq!(phases2, 6, "phases must not duplicate on re-import");
     assert_eq!(weeks2, 26, "weeks must not duplicate on re-import");
-    assert_eq!(topic_rows2, 37, "topics must not duplicate on re-import");
+    assert_eq!(topic_rows2, 41, "topics must not duplicate on re-import");
   }
 }

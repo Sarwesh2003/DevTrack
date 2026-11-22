@@ -1,11 +1,12 @@
-# Six-Month Engineering Interview & FDE Roadmap
+# Six-Month Engineering Interview & AI Upskilling Roadmap (SDE II)
 
 **Planning horizon:** 26 weeks (approximately six months)\
 **Tracks:** Java Interview Preparation · NeetCode 250 · Low-Level Design
-· High-Level Design · Forward Deployed / AI Engineering\
-**Intended learner:** Backend engineer with professional Java/Spring
-Boot experience, preparing for stronger SDE interviews while building
-practical AI application engineering capability.\
+· High-Level Design · AI Engineering Upskilling (LLMs, RAG, Agents, MCP)\
+**Intended learner:** SDE II backend engineer with professional
+Java/Spring Boot experience, preparing for stronger SDE interviews while
+upskilling for the agentic AI era: understanding how LLMs work, building
+RAG and agent systems, evaluating them, and using AI tools effectively.\
 **Recommended study capacity:** 7--8 focused hours per week outside
 work. Increase only if the routine remains sustainable.
 
@@ -87,8 +88,9 @@ and should have a concrete output. Examples:
 4.  **Do not confuse HLD and LLD.** HLD is about system boundaries, data
     flow, scaling, reliability and trade-offs. LLD is about object
     models, APIs, responsibilities, extensibility and implementation.
-5.  **FDE is not model research.** Focus on shipping reliable software
-    using existing models and APIs, not training a foundation model from
+5.  **AI upskilling is not model research.** Focus on understanding LLMs
+    well enough to build, evaluate and operate reliable software with
+    existing models and APIs, not training a foundation model from
     scratch.
 6.  **AI is a mentor/reviewer during learning tasks.** First attempt the
     explanation/design/code independently. Ask for hints, critique, test
@@ -126,12 +128,13 @@ slightly across phases.
                                                      breadth and repeated
                                                      design practice
 
-  FDE / AI engineering                  1.5--2 hours Continuous
-                                                     project-based
-                                                     learning and shipping
+  AI engineering upskilling             2--2.25 hours Concept, raw API
+                                                     code, then framework;
+                                                     one capstone project
+                                                     built incrementally
   ------------------------------------------------------------------------
 
-This is a baseline, not a rigid quota. During an FDE project milestone,
+This is a baseline, not a rigid quota. During a capstone milestone,
 borrow time from optional Java/LLD depth---not from sleep or recovery.
 During an interview-heavy period, temporarily shift time toward DSA,
 Java and design mocks.
@@ -162,7 +165,7 @@ Java and design mocks.
                    recall                                 questions without
                                                           notes
 
-  Saturday         FDE project +             2--2.5 hours A working project
+  Saturday         AI upskilling +           2--2.5 hours A working project
                    design practice                        increment and/or
                                                           one design
                                                           exercise
@@ -184,26 +187,26 @@ Preserve continuity without turning study into punishment.
   Phase 1 ---                                   1--4 Establish Java/runtime
   Foundations and                                    fundamentals, refresh DSA
   baseline                                           patterns, OOP/SOLID, HLD
-                                                     fundamentals, and LLM API
-                                                     basics
+                                                     fundamentals, Python, LLM
+                                                     fundamentals
 
   Phase 2 --- Core                              5--9 Collections/concurrency,
   interview depth                                    trees/graphs/DP progress,
                                                      design patterns,
                                                      databases/caching,
-                                                     structured LLM workflows
+                                                     LLM APIs, JSON, tools/MCP
 
   Phase 3 --- Applied                         10--14 Java performance and
   engineering                                        Spring internals, advanced
                                                      DSA, LLD projects,
-                                                     distributed systems, RAG
-                                                     vertical slice
+                                                     distributed systems,
+                                                     vector DBs, RAG slice
 
   Phase 4 ---                                 15--19 Timed DSA,
   Production readiness                               concurrency/testing, HLD
-                                                     case studies, agent/tool
-                                                     workflows, evals and
-                                                     observability
+                                                     case studies, evals,
+                                                     agents, memory,
+                                                     LangGraph
 
   Phase 5 --- Interview                       20--23 Mock interviews, design
   execution                                          trade-offs, project
@@ -1639,389 +1642,566 @@ For every design question, use this sequence:
 
 ------------------------------------------------------------------------
 
-# 7. Track E --- Forward Deployed / AI Application Engineering (FDE)
+# 7. Track E --- AI Engineering Upskilling for SDE II (Agentic AI)
 
 ## Track objective
 
-Become a backend engineer who can build, integrate, deploy and operate
-AI-powered applications for real users. The focus is applied
-engineering: connect models to business data and tools, evaluate
-behavior, secure the system, and make it reliable and cost-aware.
+Upskill from an experienced backend engineer to one who understands how
+LLMs work, can build and evaluate LLM-powered features, and can design,
+secure and operate agentic systems. The goal is to be a confident SDE II
+in a world where AI is part of the standard backend toolbox: you should
+know what a model can and cannot do, how to wire it into real systems,
+how to prove it works, and how to use AI tools to ship faster without
+losing engineering judgment.
 
 **Not the goal:** training foundation models, deep mathematical ML
 research, or collecting agent frameworks without building working
 systems.
 
-**Estimated total:** 45--55 focused hours across six months, including
-one coherent project.\
-**Suggested stack:** Python fundamentals + one model API + Spring Boot
-or FastAPI service boundary + PostgreSQL/pgvector + Docker. Choose one
-orchestration framework only after understanding direct API/tool calls.
-Do not learn every vendor/framework simultaneously.
+**Estimated total:** 55--60 focused hours across six months (about
+2--2.25 hours per week), including one capstone project.\
+**Suggested stack:** Python + FastAPI, one primary model provider API,
+PostgreSQL/pgvector, MCP, Docker. Learn LangGraph only after building
+the agent loop by hand. Do not learn every vendor and framework
+simultaneously.
 
-### E1. Python for AI application engineering
+**Learning order principle:** concept, then raw API/code, then
+framework. Every abstraction (LangChain, LangGraph, vector DB client,
+MCP SDK) is learned after you have done the same thing manually once.
 
-  ----------------------------------------------------------------------------------------
+### Topic coverage map
+
+  ------------------------------------------------------------------------
+  Topic                                              Module
+  -------------------------------------------------- ---------------------
+  Python                                             E1
+
+  LLMs, internals, tokens, context window            E2
+
+  Limitations and hallucinations                     E2, E8, E11
+
+  Streaming, API integration                         E3
+
+  System prompts, context engineering                E4
+
+  JSON / structured output                           E5
+
+  Tool calling, MCP                                  E6
+
+  Embeddings, vector databases, retrieval            E7
+
+  RAG, chunking, citations                           E8
+
+  Evals                                              E9
+
+  Agents, workflows, memory, LangGraph               E10
+
+  Security and guardrails                            E11
+
+  Cost, latency, observability                       E12
+
+  AI-assisted development                            E13
+
+  Capstone and interview readiness                   E14
+  ------------------------------------------------------------------------
+
+### E1. Python for AI engineering
+
+  ----------------------------------- ------------------------------------------------------------------------
   Field                               Plan
-  ----------------------------------- ----------------------------------------------------
-  Priority                            High
-
-  Time estimate                       4 hours
-
-  Topics                              Practical Python needed to build AI services
-
-  Subtopics                           Types and data structures; functions; classes;
-                                      modules; exceptions; iterators/generators;
-                                      comprehensions; virtual environments; package
-                                      management; typing; Pydantic models; async/await;
-                                      HTTP clients; FastAPI basics; pytest
-
-  Learning resources                  [Python official
-                                      tutorial](https://docs.python.org/3/tutorial/);
-                                      [FastAPI
-                                      tutorial](https://fastapi.tiangolo.com/tutorial/);
-                                      [Pydantic documentation](https://docs.pydantic.dev/)
-
-  Practical work                      Build a typed FastAPI endpoint with validation,
-                                      async HTTP call, error handling and tests
-
-  Completion criteria                 Build and test a small API without relying on
-                                      generated code for basic Python syntax or debugging
-
-  Dependencies                        None; Java experience helps with OOP concepts
-  ----------------------------------------------------------------------------------------
-
-### E2. LLM foundations and model API integration
-
-  ----------------------------------------------------------------------------------------------
-  Field                               Plan
-  ----------------------------------- ----------------------------------------------------------
-  Priority                            High
-
-  Time estimate                       4 hours
-
-  Topics                              How to integrate foundation models into applications
-
-  Subtopics                           Tokens and tokenization; context windows;
-                                      system/developer/user instructions; sampling basics; model
-                                      selection; API requests/responses; streaming; timeouts;
-                                      retries; rate limits; token usage; cost estimation; prompt
-                                      versioning; provider abstraction; secrets management
-
-  Learning resources                  [OpenAI API
-                                      documentation](https://developers.openai.com/api/docs/);
-                                      provider documentation for the chosen model; OpenAI
-                                      Cookbook
-
-  Practical work                      Build a small model gateway with streaming, usage logging,
-                                      timeout/retry behavior and a configurable provider/model
-
-  Completion criteria                 Explain request lifecycle, context/token constraints,
-                                      streaming and cost drivers; integrate an LLM API safely
-
-  Dependencies                        E1
-  ----------------------------------------------------------------------------------------------
-
-### E3. Prompting, structured outputs and context engineering
-
-  -----------------------------------------------------------------------
-  Field                               Plan
-  ----------------------------------- -----------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Priority                            High
 
   Time estimate                       3 hours
 
-  Topics                              Reliable model input and output
+  Topics                              Practical Python for an experienced Java engineer
 
-  Subtopics                           Prompt structure; task
-                                      decomposition; examples/few-shot
-                                      prompting; structured JSON outputs;
-                                      schema validation; output parsing;
-                                      context selection; context
-                                      compression; prompt injection
-                                      awareness; deterministic
-                                      post-processing; prompt/version
-                                      management
+  Subtopics                           Syntax and idioms vs Java (dynamic/duck typing, indentation, None,
+                                      truthiness); list/dict/set/tuple; comprehensions; functions,
+                                      *args/**kwargs; classes and dataclasses; modules and packages;
+                                      exceptions and context managers; iterators and generators; decorators;
+                                      type hints; virtual environments and uv/pip; Pydantic models;
+                                      async/await and asyncio; HTTP clients (httpx); FastAPI basics; pytest;
+                                      Jupyter notebooks for experiments
 
-  Learning resources                  OpenAI structured outputs
-                                      documentation; Anthropic prompting
-                                      and context engineering guides
+  Learning resources                  [Python tutorial](https://docs.python.org/3/tutorial/); [FastAPI
+                                      tutorial](https://fastapi.tiangolo.com/tutorial/); [Pydantic
+                                      docs](https://docs.pydantic.dev/); [uv docs](https://docs.astral.sh/uv/)
 
-  Practical work                      Create a structured
-                                      extraction/classification endpoint
-                                      with schema validation and
-                                      malformed-output handling
+  Practical work                      Build a typed FastAPI endpoint with Pydantic validation, an async call
+                                      to an external HTTP API, error handling and pytest tests
 
-  Completion criteria                 Produce validated structured data,
-                                      handle invalid output safely and
-                                      explain why prompting alone is not
-                                      a correctness guarantee
+  Completion criteria                 Build and test a small API without relying on generated code for basic
+                                      syntax or debugging; explain how Python async differs from Java
+                                      threads/CompletableFuture
 
-  Dependencies                        E2
-  -----------------------------------------------------------------------
+  Dependencies                        None; Java/Spring experience transfers for OOP, DI and REST concepts
+  ----------------------------------- ------------------------------------------------------------------------
 
-### E4. Tool/function calling and workflow design
+### E2. LLM foundations, internals, limitations and hallucinations
 
-  ---------------------------------------------------------------------------------------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Field                               Plan
-  ----------------------------------- ---------------------------------------------------------------------------
-  Priority                            High
-
-  Time estimate                       4 hours
-
-  Topics                              Connecting models to application capabilities
-
-  Subtopics                           Tool schemas; tool selection; validation; authorization; execution loop;
-                                      tool result handling; idempotent tools; timeouts; retries; human approval;
-                                      workflow vs agent distinction; sequential, parallel and conditional
-                                      workflows
-
-  Learning resources                  [OpenAI function
-                                      calling](https://developers.openai.com/api/docs/guides/function-calling);
-                                      [Anthropic --- Building effective
-                                      agents](https://www.anthropic.com/research/building-effective-agents)
-
-  Practical work                      Build an assistant with 3--4 safe tools (search records, create task,
-                                      summarize item, retrieve status); enforce authorization in application code
-
-  Completion criteria                 Explain the tool-call cycle; distinguish model intent from trusted
-                                      application execution; handle invalid, duplicate and unauthorized tool
-                                      calls
-
-  Dependencies                        E2, E3
-  ---------------------------------------------------------------------------------------------------------------
-
-### E5. Embeddings and retrieval-augmented generation (RAG)
-
-  -------------------------------------------------------------------------------------------
-  Field                               Plan
-  ----------------------------------- -------------------------------------------------------
-  Priority                            High
-
-  Time estimate                       6 hours
-
-  Topics                              Grounding model responses in external knowledge
-
-  Subtopics                           Embeddings; semantic similarity; cosine/dot-product
-                                      distance; document ingestion; parsing; chunking;
-                                      overlap; metadata; vector stores; PostgreSQL/pgvector;
-                                      top-K retrieval; metadata filtering; hybrid search;
-                                      reranking; citations; retrieval evaluation; freshness
-                                      and deletion
-
-  Learning resources                  OpenAI embeddings documentation; [pgvector
-                                      documentation](https://github.com/pgvector/pgvector);
-                                      PostgreSQL docs; LangChain retrieval concepts (use
-                                      selectively)
-
-  Practical work                      Ingest PDFs/Markdown, chunk and embed them, store
-                                      metadata/vectors, retrieve relevant chunks, generate
-                                      cited answers; compare chunk sizes and top-K settings
-
-  Completion criteria                 Explain the RAG pipeline and failure modes; build a
-                                      working ingestion/query path; measure retrieval quality
-                                      on a small test set
-
-  Dependencies                        E1, E2, E3, SQL basics
-  -------------------------------------------------------------------------------------------
-
-### E6. Agent orchestration and state management
-
-  -------------------------------------------------------------------------------------------------------
-  Field                               Plan
-  ----------------------------------- -------------------------------------------------------------------
-  Priority                            Medium
-
-  Time estimate                       4 hours
-
-  Topics                              Multi-step AI workflows
-
-  Subtopics                           Workflow graphs; state; routing; conditional edges; retries;
-                                      checkpointing; short-term vs long-term memory; human-in-the-loop;
-                                      interrupt/resume; tool boundaries; agent loop; bounded autonomy;
-                                      termination criteria
-
-  Learning resources                  [LangGraph
-                                      documentation](https://docs.langchain.com/oss/python/langgraph/);
-                                      Anthropic --- Building effective agents
-
-  Practical work                      Build a bounded research/task workflow with explicit states, retry
-                                      limits and a human approval step; compare direct function
-                                      orchestration with a framework
-
-  Completion criteria                 Explain state transitions and recovery; demonstrate why a
-                                      graph/framework is justified; prevent unbounded loops and
-                                      uncontrolled tool execution
-
-  Dependencies                        E4, E5
-  -------------------------------------------------------------------------------------------------------
-
-### E7. Evaluation, testing and quality measurement
-
-  -----------------------------------------------------------------------
-  Field                               Plan
-  ----------------------------------- -----------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Priority                            High
 
   Time estimate                       5 hours
 
-  Topics                              Testing probabilistic software
+  Topics                              How LLMs work well enough to predict their behavior and failure modes
 
-  Subtopics                           Golden datasets; test cases;
-                                      exact-match vs semantic metrics;
-                                      retrieval precision/recall; answer
-                                      relevance;
-                                      faithfulness/groundedness;
-                                      tool-call correctness; regression
-                                      evaluation; model-as-judge
-                                      limitations; human review; online
-                                      feedback; experiment tracking
+  Subtopics                           What an LLM is (next-token prediction); training stages (pretraining,
+                                      supervised fine-tuning, preference tuning/RLHF) at concept level; tokens
+                                      and tokenization (BPE, why tokens are not words, cost of code and
+                                      non-English text); embeddings inside the model; transformer and
+                                      self-attention intuition; context window (input + output share it,
+                                      quadratic attention cost, long-context degradation, lost-in-the-middle);
+                                      KV cache and why input vs output tokens differ in latency and price;
+                                      sampling (temperature, top-p, top-k) and non-determinism; model
+                                      families, sizes and reasoning models; knowledge cutoff; hosted vs
+                                      open-weight models; limitations (hallucination, stale knowledge, weak
+                                      counting/arithmetic, prompt sensitivity, sycophancy, long-context
+                                      degradation); why hallucinations happen and their types (fabricated
+                                      facts, wrong citations, ungrounded summaries, tool-result misreading)
 
-  Learning resources                  OpenAI Evals documentation; RAG
-                                      evaluation material from the chosen
-                                      framework; Anthropic evaluation
-                                      guidance
+  Learning resources                  Andrej Karpathy: Intro to Large Language Models and Let's build the GPT
+                                      Tokenizer (YouTube); 3Blue1Brown neural network and transformer videos;
+                                      [Hugging Face LLM Course](https://huggingface.co/learn/llm-course)
+                                      (tokenizers chapter); Chip Huyen, AI Engineering (foundation models
+                                      chapter); provider model documentation
 
-  Practical work                      Create 30--50 representative test
-                                      questions; record expected source
-                                      documents and acceptable outcomes;
-                                      run prompt/retrieval changes
-                                      against the same dataset
+  Practical work                      Notebook: count tokens for English, code, JSON and non-English text and
+                                      compare; run one prompt at several temperatures; write 15 prompts that
+                                      provoke hallucination and record how each model fails. Optional depth:
+                                      implement scaled dot-product attention in NumPy
 
-  Completion criteria                 Report measurable quality
-                                      before/after a change; identify
-                                      false positives and false
-                                      negatives; explain why a demo is
-                                      not an evaluation
+  Completion criteria                 Explain without notes how a prompt becomes tokens and then output, how
+                                      the context window is consumed, why tokens drive cost and latency, and
+                                      why hallucinations occur; estimate the token cost of a request
 
-  Dependencies                        E3, E5; E4 for tool-use evaluations
-  -----------------------------------------------------------------------
+  Dependencies                        E1 for notebooks; no ML math background required
+  ----------------------------------- ------------------------------------------------------------------------
 
-### E8. Guardrails, security and privacy
+### E3. LLM API integration, streaming and context-window management
 
-  -----------------------------------------------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Field                               Plan
-  ----------------------------------- -----------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       3 hours
+
+  Topics                              Calling models reliably from a backend service
+
+  Subtopics                           Request/response anatomy; roles and message arrays; APIs are stateless,
+                                      so conversation state lives in your app; streaming (server-sent events,
+                                      delta events, cancellation, partial output); max tokens and stop
+                                      reasons; timeouts; retries with exponential backoff and jitter; 429 and
+                                      5xx handling; rate limits; token usage and cost estimation; context
+                                      budgeting (truncation, sliding window, summarization); prompt caching
+                                      concepts; provider abstraction; secrets management
+
+  Learning resources                  [OpenAI API docs](https://developers.openai.com/api/docs/); [Anthropic
+                                      docs](https://docs.claude.com); documentation of the one provider you
+                                      choose as primary
+
+  Practical work                      Build a small model gateway in FastAPI: streaming endpoint (SSE) with a
+                                      simple client, usage and cost logging, timeout/retry behavior,
+                                      configurable model, and a chat that trims history to a token budget
+
+  Completion criteria                 Explain the request lifecycle, streaming mechanics and cost drivers;
+                                      integrate an LLM API safely with bounded retries; show the app behaving
+                                      correctly when the context budget is exceeded
+
+  Dependencies                        E1, E2
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E4. Prompting, system prompts and context engineering
+
+  ----------------------------------- -------------------------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- -------------------------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       3 hours
+
+  Topics                              Controlling model behavior through input design
+
+  Subtopics                           System vs developer vs user messages and instruction hierarchy; structure of a good system
+                                      prompt (role, task, constraints, output format, examples); few-shot examples; delimiters
+                                      and XML-style sections; step-by-step reasoning and when reasoning models make it
+                                      unnecessary; task decomposition; context engineering (what to include, ordering,
+                                      compression, just-in-time retrieval); grounding and permission to say I don't know to
+                                      reduce hallucination; prompt injection awareness; storing and versioning prompts like code;
+                                      iterating against test cases rather than intuition
+
+  Learning resources                  [Anthropic prompt engineering
+                                      overview](https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview);
+                                      [Anthropic: Effective context engineering for AI
+                                      agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents);
+                                      OpenAI prompt engineering guide
+
+  Practical work                      Write a system prompt for a domain assistant; compare three prompt variants on 15 fixed
+                                      test inputs; keep prompts in version control with a changelog
+
+  Completion criteria                 Explain why each prompt element exists; show measured before/after improvement from a
+                                      prompt change; explain why prompting alone does not guarantee correctness
+
+  Dependencies                        E3
+  ----------------------------------- -------------------------------------------------------------------------------------------
+
+### E5. Structured outputs and JSON
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       2 hours
+
+  Topics                              Getting machine-readable, validated output from a probabilistic system
+
+  Subtopics                           Free-text parsing vs JSON mode vs schema-constrained structured outputs;
+                                      JSON Schema; Pydantic models as the contract; validation and
+                                      retry-with-error-feedback; repair strategies; closed sets (enums) and
+                                      explicit unknown/null fields; partial JSON while streaming;
+                                      deterministic post-processing; schema versioning; handling refusals and
+                                      truncated output
+
+  Learning resources                  OpenAI structured outputs documentation; Anthropic structured output and
+                                      tool-use documentation; Pydantic docs
+
+  Practical work                      Build an extraction/classification endpoint (for example support tickets
+                                      to JSON) with schema validation, bounded retry on invalid output, and a
+                                      measured valid-output rate over 30 samples
+
+  Completion criteria                 Produce validated structured data; handle malformed, truncated and
+                                      refused output safely; explain the difference between syntactically
+                                      valid JSON and a correct answer
+
+  Dependencies                        E3, E4
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E6. Tool calling and MCP (Model Context Protocol)
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       5 hours
+
+  Topics                              Connecting models to code, data and external systems
+
+  Subtopics                           Tool schemas and descriptions; the model proposes, your application
+                                      executes; the tool-call loop; parallel tool calls; returning errors to
+                                      the model; authorization in application code; idempotent tools; timeouts
+                                      and retries; human approval for consequential actions; tool design (few,
+                                      clear, token-efficient tools); MCP purpose (a standard protocol so any
+                                      AI app can use any tool server); host/client/server roles; primitives
+                                      (tools, resources, prompts); JSON-RPC messages; transports (stdio and
+                                      streamable HTTP); capability negotiation; authorization basics (OAuth);
+                                      MCP security (untrusted servers, tool poisoning, confused deputy, least
+                                      privilege); when to use MCP vs plain function calling
+
+  Learning resources                  [Model Context Protocol docs and spec](https://modelcontextprotocol.io);
+                                      [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk);
+                                      MCP Inspector; provider function-calling docs; [Anthropic: Building
+                                      effective
+                                      agents](https://www.anthropic.com/research/building-effective-agents)
+
+  Practical work                      Part 1: hand-write a tool-calling loop with 3 safe tools. Part 2: build
+                                      an MCP server exposing 2--3 tools and 1 resource that wrap an existing
+                                      REST or Spring Boot service; test with MCP Inspector and connect it to
+                                      an MCP-capable client or your own app
+
+  Completion criteria                 Explain the tool-call cycle and the MCP architecture; distinguish model
+                                      intent from trusted execution; handle invalid, duplicate and
+                                      unauthorized tool calls; justify MCP vs direct function calling for a
+                                      given scenario
+
+  Dependencies                        E3, E5; Java/Spring service for the MCP wrapper is a useful reuse
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E7. Embeddings, similarity search and vector databases
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
   Priority                            High
 
   Time estimate                       4 hours
+
+  Topics                              Representing meaning as vectors and searching them at scale
+
+  Subtopics                           What an embedding is and what it is not; embedding models, dimensions
+                                      and cost; cosine, dot-product and L2 similarity; normalization; semantic
+                                      vs lexical search; BM25; exact search vs approximate nearest neighbor
+                                      (ANN); HNSW and IVF intuition; recall, latency and memory trade-offs;
+                                      vector store options (pgvector vs dedicated stores such as Qdrant or
+                                      Pinecone); metadata filtering; indexing, upserts, deletes and
+                                      re-embedding when the model changes; hybrid search with rank fusion;
+                                      rerankers (cross-encoders); multi-tenant isolation
+
+  Learning resources                  OpenAI embeddings documentation;
+                                      [pgvector](https://github.com/pgvector/pgvector); PostgreSQL docs;
+                                      Hugging Face MTEB leaderboard for embedding model comparison
+
+  Practical work                      Embed 200--500 chunks, store them in PostgreSQL/pgvector with an HNSW
+                                      index, run filtered similarity queries, and compare vector, BM25 and
+                                      hybrid retrieval on 15 test queries
+
+  Completion criteria                 Explain why similarity search finds relevant text and when it fails;
+                                      justify an index type, distance metric and DB choice; compare retrieval
+                                      strategies with measured results
+
+  Dependencies                        E1, E2, SQL basics (HLD D3)
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E8. RAG: ingestion, chunking, retrieval and citations
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       6 hours
+
+  Topics                              Grounding model answers in your own knowledge with verifiable sources
+
+  Subtopics                           RAG vs long context vs fine-tuning; the pipeline end to end; parsing
+                                      PDF/HTML/Markdown; cleaning; chunking strategies (fixed, recursive,
+                                      heading/structure-aware, semantic, parent-child); chunk size and
+                                      overlap; metadata; contextual chunk headers; query rewriting and
+                                      expansion; top-K and score thresholds; reranking; context assembly under
+                                      a token budget; citations (chunk IDs, source spans, quote verification,
+                                      provider citation features); refusing when evidence is missing;
+                                      freshness, incremental re-indexing and deletion; failure modes (bad
+                                      parsing, wrong chunk, lost-in-the-middle, conflicting or stale
+                                      documents)
+
+  Learning resources                  [Anthropic: Contextual
+                                      Retrieval](https://www.anthropic.com/news/contextual-retrieval);
+                                      pgvector docs; LangChain retrieval concepts (use selectively); Chip
+                                      Huyen, AI Engineering (RAG chapter)
+
+  Practical work                      Build an ingestion CLI and an /ask endpoint that returns an answer with
+                                      citations; run an ablation on chunk sizes (256/512/1024 tokens) and
+                                      top-K; programmatically verify that each cited chunk supports the claim
+
+  Completion criteria                 Explain the RAG pipeline and where each failure mode originates; build a
+                                      working ingestion-to-cited-answer path; measure retrieval quality and
+                                      citation accuracy on a test set
+
+  Dependencies                        E3, E4, E5, E7
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E9. Evals: testing and measuring AI systems
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       4 hours
+
+  Topics                              Engineering discipline for non-deterministic software
+
+  Subtopics                           Why a demo is not an evaluation; golden datasets (start with 30--50
+                                      cases, grow to 100+); reading traces and error analysis; code-based
+                                      checks vs LLM-as-judge; judge biases (position, verbosity) and
+                                      calibration against human labels; retrieval metrics (recall@k,
+                                      precision@k, MRR, nDCG); generation metrics (faithfulness/groundedness,
+                                      answer relevance, citation accuracy); structured-output validity;
+                                      tool-call correctness; agent outcome and trajectory evals; run-to-run
+                                      variance; regression suites in CI; online feedback; tracing tools
+                                      (Langfuse, LangSmith, Phoenix)
+
+  Learning resources                  [Hamel Husain: Your AI Product Needs
+                                      Evals](https://hamel.dev/blog/posts/evals/); [Langfuse
+                                      docs](https://langfuse.com/docs); provider evaluation guides; Chip
+                                      Huyen, AI Engineering (evaluation chapters)
+
+  Practical work                      Build an eval harness (pytest or script) for the RAG project with
+                                      retrieval and answer metrics; measure one change before and after;
+                                      calibrate an LLM judge against 20 hand-labeled cases
+
+  Completion criteria                 Report measurable quality before and after a change; identify false
+                                      positives and false negatives; explain limits of model-as-judge; run
+                                      evals as a regression gate
+
+  Dependencies                        E5, E8; E6 for tool-use evals
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E10. Agents, workflows, memory and LangGraph
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       6 hours
+
+  Topics                              Multi-step AI systems with bounded autonomy
+
+  Subtopics                           Workflow vs agent; workflow patterns (prompt chaining, routing,
+                                      parallelization, orchestrator-workers, evaluator-optimizer); the agent
+                                      loop and ReAct-style reasoning; planning; stop conditions, step limits
+                                      and budgets; context management in long-running agents (compaction,
+                                      scratch notes, sub-agents); memory (short-term thread state; long-term
+                                      episodic, semantic and procedural memory; summarization; retrieval-based
+                                      memory; user profile memory; privacy and deletion); LangGraph (state
+                                      schema, nodes, edges, conditional edges, reducers, checkpointers and
+                                      threads, interrupts for human-in-the-loop, streaming); multi-agent
+                                      designs and when not to use them; failure modes (loops, compounding
+                                      errors, tool misuse, cost blow-up); awareness of vendor agent SDKs
+
+  Learning resources                  [Anthropic: Building effective
+                                      agents](https://www.anthropic.com/research/building-effective-agents);
+                                      [LangGraph docs](https://docs.langchain.com/oss/python/langgraph/);
+                                      [Anthropic: Writing tools for
+                                      agents](https://www.anthropic.com/engineering/writing-tools-for-agents)
+
+  Practical work                      Hand-write an agent loop (about 100 lines) with a step limit and budget;
+                                      then reimplement the same workflow in LangGraph with checkpointing,
+                                      memory and a human approval step; compare the two honestly
+
+  Completion criteria                 Explain state transitions, recovery and memory design; justify when a
+                                      workflow beats an agent and when a framework is warranted; prevent
+                                      unbounded loops and uncontrolled tool execution
+
+  Dependencies                        E6, E8, E9
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E11. Guardrails, security and privacy
+
+  ----------------------------------- -------------------------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- -------------------------------------------------------------------------------------------
+  Priority                            High
+
+  Time estimate                       3 hours
 
   Topics                              Secure AI application design
 
-  Subtopics                           Prompt injection; untrusted
-                                      retrieved content; data leakage;
-                                      tenant isolation; PII handling;
-                                      authorization at tool boundary;
-                                      least privilege; secrets; output
-                                      validation; moderation/safety
-                                      policies; auditability;
-                                      retention/deletion; human approval
-                                      for consequential actions
+  Subtopics                           Direct and indirect prompt injection (retrieved documents, tool outputs, MCP servers); data
+                                      exfiltration paths; excessive agency and least privilege; authorization at the tool
+                                      boundary; tenant isolation in retrieval; PII handling and redaction; secrets; output
+                                      validation; hallucination controls (grounding checks, citation verification, abstention);
+                                      moderation and safety policies; audit logging; retention and deletion; human approval for
+                                      consequential actions; OWASP Top 10 for LLM Applications
 
-  Learning resources                  OWASP Top 10 for LLM Applications;
-                                      provider security documentation;
-                                      application security guidance
+  Learning resources                  [OWASP Top 10 for LLM
+                                      Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/);
+                                      provider security guidance; MCP security best practices
 
-  Practical work                      Add adversarial documents and
-                                      prompts to test set; ensure
-                                      retrieval respects user/tenant
-                                      scope; prevent a model from
-                                      invoking unauthorized tools
+  Practical work                      Create a red-team set of 15 attacks (injected documents, jailbreak attempts, cross-tenant
+                                      queries, unauthorized tool calls); enforce authorization outside the model; add the cases
+                                      to the eval suite
 
-  Completion criteria                 Explain trust boundaries;
-                                      demonstrate authorization outside
-                                      the model; test prompt injection
-                                      and data isolation scenarios
+  Completion criteria                 Explain trust boundaries; demonstrate authorization outside the model; pass
+                                      prompt-injection and data-isolation tests
 
-  Dependencies                        E2--E6
-  -----------------------------------------------------------------------
+  Dependencies                        E6--E10
+  ----------------------------------- -------------------------------------------------------------------------------------------
 
-### E9. Production operations: latency, cost, reliability and observability
+### E12. Production operations: cost, latency, reliability and observability
 
-  -----------------------------------------------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Field                               Plan
-  ----------------------------------- -----------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Priority                            High
 
-  Time estimate                       4 hours
+  Time estimate                       2 hours
 
-  Topics                              Operating an AI feature in
-                                      production
+  Topics                              Operating AI features as real services
 
-  Subtopics                           Token/cost tracking; prompt caching
-                                      concepts; streaming UX; timeouts;
-                                      retries; rate limits; concurrency
-                                      limits; fallbacks; model routing;
-                                      batching; caching; tracing; request
-                                      IDs; prompt/model versioning;
-                                      provider outages; graceful
-                                      degradation
+  Subtopics                           Per-request token, cost and latency tracking; prompt caching; semantic
+                                      caching and its risks; model routing (small vs large models); batch
+                                      APIs; async processing of long tasks with queues; streaming UX;
+                                      timeouts, retries, circuit breakers and fallbacks; rate and concurrency
+                                      limits; tracing with OpenTelemetry; request IDs; prompt and model
+                                      versioning; provider outages and graceful degradation; quality SLOs
+                                      alongside latency SLOs
 
-  Learning resources                  Provider API production guides;
-                                      OpenTelemetry; AWS Well-Architected
+  Learning resources                  Provider production guides; [OpenTelemetry
+                                      docs](https://opentelemetry.io/docs/); HLD tracks D5, D7 and D8
 
-  Practical work                      Add per-request token/cost/latency
-                                      logs; simulate provider timeout;
-                                      implement fallback and request
-                                      budget; create a dashboard or
-                                      report
+  Practical work                      Add per-request cost/latency logging and a simple dashboard or report;
+                                      simulate a provider timeout; implement a fallback and a per-request
+                                      budget
 
-  Completion criteria                 Explain the cost and latency of a
-                                      request; diagnose a failed call;
-                                      demonstrate bounded retries,
-                                      timeouts and useful telemetry
+  Completion criteria                 Explain the cost and latency of a request; diagnose a failed call from
+                                      traces; demonstrate bounded retries, timeouts and useful telemetry
 
-  Dependencies                        E2, E4, E5, E7
-  -----------------------------------------------------------------------
+  Dependencies                        E3, E8, E9, E10
+  ----------------------------------- ------------------------------------------------------------------------
 
-### E10. FDE project: build one real AI-enabled application
+### E13. Working effectively with AI coding agents
 
-  -----------------------------------------------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
   Field                               Plan
-  ----------------------------------- -----------------------------------
+  ----------------------------------- ------------------------------------------------------------------------
+  Priority                            Medium
+
+  Time estimate                       2 hours
+
+  Topics                              Using AI tools to multiply, not replace, engineering judgment
+
+  Subtopics                           Delegating well-scoped tasks; project context files (for example
+                                      CLAUDE.md or AGENTS.md); plan first, then implement; small reviewable
+                                      diffs; tests as the verification loop; reviewing AI-generated code for
+                                      correctness, security and maintainability; when to hand-write instead
+                                      (learning tasks, core design decisions); MCP-connected developer tools;
+                                      cost and context hygiene
+
+  Learning resources                  Claude Code documentation; GitHub Copilot or Cursor documentation
+                                      (choose one); your own failure log
+
+  Practical work                      Use a coding agent to add one feature with tests to the capstone; review
+                                      the diff line by line; record where the agent erred and how tests or
+                                      review caught it
+
+  Completion criteria                 Deliver an AI-assisted change that you can fully explain and defend;
+                                      show a repeatable workflow with context file, plan, tests and review
+
+  Dependencies                        E1; applies throughout. Rule 6 still holds for learning tasks
+  ----------------------------------- ------------------------------------------------------------------------
+
+### E14. Capstone: build one real AI application
+
+  ----------------------------------- ------------------------------------------------------------------------
+  Field                               Plan
+  ----------------------------------- ------------------------------------------------------------------------
   Priority                            High
 
-  Time estimate                       12--15 hours across the six months
+  Time estimate                       8--10 hours across the six months
 
   Topics                              End-to-end applied AI engineering
 
-  Subtopics                           Pick one real workflow; identify
-                                      user/problem; build a small API;
-                                      integrate a model; add retrieval or
-                                      tools only when needed; persist
-                                      data; add
-                                      authentication/authorization if
-                                      applicable; evaluate behavior; add
-                                      observability; document deployment
-                                      and limitations
+  Subtopics                           Pick one real workflow and user; define success metrics; build a FastAPI
+                                      service; integrate a model with streaming; structured outputs; add RAG
+                                      with citations over a real corpus; expose capabilities through an MCP
+                                      server; add a bounded workflow or agent only where needed; persist state
+                                      and memory; authentication and tenant scoping if applicable; evaluation
+                                      suite; observability; documentation of deployment and limitations
 
-  Learning resources                  Use the resources in E1--E9;
-                                      provider documentation should be
-                                      the source of truth for API
+  Learning resources                  E1--E13 resources; provider documentation is the source of truth for API
                                       behavior
 
-  Practical work                      Build a knowledge assistant,
-                                      personal productivity assistant,
-                                      support copilot, document Q&A tool,
-                                      or another bounded workflow.
-                                      Suggested implementation:
-                                      Python/FastAPI AI service,
-                                      Java/Spring Boot integration if
-                                      useful, PostgreSQL/pgvector,
-                                      Docker, and a simple UI
+  Practical work                      Suggested: an engineering knowledge or runbook assistant, a support
+                                      copilot, or a study assistant over your own notes. Suggested stack:
+                                      Python/FastAPI, PostgreSQL/pgvector, Docker, MCP server, LangGraph only
+                                      if a graph is justified, simple UI, Spring Boot integration if useful
 
-  Completion criteria                 A working deployed or locally
-                                      reproducible product; README and
-                                      architecture diagram;
-                                      test/evaluation dataset;
-                                      cost/latency report; security
-                                      considerations; demo of failure
-                                      handling
+  Completion criteria                 A locally reproducible or deployed app; README and architecture diagram;
+                                      eval dataset and report; cost/latency report; security notes; demo of
+                                      failure handling; ability to explain every design decision in an
+                                      interview
 
-  Dependencies                        E1--E9 progressively
-  -----------------------------------------------------------------------
+  Dependencies                        E1--E13 progressively
+  ----------------------------------- ------------------------------------------------------------------------
 
-### FDE project milestones
+### Capstone milestones
 
   -----------------------------------------------------------------------------
   Milestone               Target phase            Deliverable
@@ -2030,30 +2210,64 @@ Do not learn every vendor/framework simultaneously.
   definition                                      user journey, success metric,
                                                   architecture sketch
 
-  M2 --- Basic model      Weeks 5--8              Working API call, structured
-  integration                                     output, validation, logs
+  M2 --- Model            Weeks 5--8              Streaming API call,
+  integration and                                 versioned system prompt,
+  structured output                               validated JSON output, logs
 
-  M3 --- Useful           Weeks 9--13             RAG or tool-calling vertical
-  context/tools                                   slice; do not add both unless
-                                                  the use case needs both
+  M3 --- Tools and MCP    Weeks 9--10             Tool-calling loop and an MCP
+                                                  server wrapping one real
+                                                  service
 
-  M4 --- Reliability and  Weeks 14--18            Golden dataset, regression
-  evaluation                                      evaluation, error handling,
-                                                  authorization and telemetry
+  M4 --- Retrieval        Weeks 11--15            Ingestion, pgvector search,
+  and RAG                                         hybrid retrieval, cited
+                                                  answers
 
-  M5 --- Production       Weeks 19--22            Cost/latency controls,
-  hardening                                       deployment/reproducibility,
-                                                  documentation
+  M5 --- Evals and        Weeks 16--20            Golden dataset, regression
+  agentic workflow                                evals, bounded workflow or
+                                                  agent with memory and
+                                                  human approval
 
-  M6 --- Technical        Weeks 23--26            Architecture explanation,
-  walkthrough                                     demo, trade-offs, known
-                                                  limitations and next steps
+  M6 --- Hardening        Weeks 21--26            Security tests, cost/latency
+  and walkthrough                                 controls, README, demo,
+                                                  trade-offs and known
+                                                  limitations
   -----------------------------------------------------------------------------
 
 **Mentor warning:** Do not start with a multi-agent system. Start with a
-direct model call, then structured output, then retrieval/tool use, then
-a deterministic workflow. Introduce an agent framework only when dynamic
-planning is genuinely required.
+direct model call, then structured output, then tools and retrieval,
+then a deterministic workflow. Introduce an agent or framework only when
+dynamic planning is genuinely required and you can show it beats the
+simpler design on your evals.
+
+### AI interview self-test question bank
+
+Answer each aloud in 3--5 minutes without notes, with trade-offs.
+
+-   Walk through what happens from a prompt string to a generated
+    response. Where do tokens, the context window and sampling fit?
+-   Why do LLMs hallucinate, and which five techniques reduce it?
+-   Design a RAG system over 10 million documents: ingestion, chunking,
+    index, retrieval, reranking, citations, freshness, access control.
+-   How do you pick chunk size and top-K, and how do you prove the
+    choice is right?
+-   Compare pgvector with a dedicated vector database for a production
+    workload.
+-   How do you guarantee valid JSON from a model? What can still go
+    wrong?
+-   Explain MCP. When would you use it instead of plain function
+    calling?
+-   Design an agent that can take consequential actions. Where do
+    authorization, approval, limits and rollback live?
+-   Workflow or agent: how do you decide?
+-   How do you give an assistant memory across sessions without leaking
+    data between users?
+-   How do you evaluate a RAG system and an agent? What are the
+    limitations of LLM-as-judge?
+-   A conversation exceeds the context window. What are your options?
+-   Estimate and reduce the cost and latency of an LLM feature at 1
+    million requests per day.
+-   Describe a prompt injection attack through a retrieved document and
+    how your design contains it.
 
 ------------------------------------------------------------------------
 
@@ -2079,16 +2293,16 @@ related topics rather than schedule redundant learning.
   memory model            engineering             pools, shared state and
                                                   backpressure
 
-  SQL and transactions    Java, HLD and FDE       Persistence, isolation,
+  SQL and transactions    Java, HLD and AI        Persistence, isolation,
                                                   idempotency and vector
                                                   metadata
 
-  Networking and APIs     HLD and FDE             Model APIs,
+  Networking and APIs     HLD and AI              Model APIs,
                                                   service-to-service
                                                   communication, timeouts
                                                   and retries
 
-  Queues and event-driven HLD, Java and FDE       Async ingestion,
+  Queues and event-driven HLD, Java and AI       Async ingestion,
   design                                          background jobs and
                                                   tool execution
 
@@ -2101,7 +2315,7 @@ related topics rather than schedule redundant learning.
                                                   abstractions and clean
                                                   service boundaries
 
-  Distributed systems     HLD and FDE             Failure handling,
+  Distributed systems     HLD and AI              Failure handling,
   fundamentals                                    state, retries,
                                                   consistency and
                                                   resilience
@@ -2117,111 +2331,111 @@ throughout all weeks. Use the daily scheduler to interleave revisions
 and the other tracks.
 
   -----------------------------------------------------------------------------------------------------------------------------------------
-            Week Java                 DSA --- official    LLD --- CodeArmy            HLD                      FDE
-                                      NeetCode 250                                                             
+            Week Java                 DSA --- official    LLD --- CodeArmy            HLD                      AI Upskilling
+                                      NeetCode 250
   -------------- -------------------- ------------------- --------------------------- ------------------------ ----------------------------
-               1 A1 language/object   Resume first        C1 approach and OOP         D1 requirements and      E1 Python setup and API
-                 model baseline       incomplete official                             estimation               basics
-                                      category; baseline                                                       
-                                      1--2 problems                                                            
+               1 A1 language/object   Resume first        C1 approach and OOP         D1 requirements and      E1 Python for Java devs
+                 model baseline       incomplete official                             estimation               (uv, typing)
+                                      category; baseline
+                                      1--2 problems
 
-               2 A2 collections       Continue official   C1 UML and modeling         D2 request lifecycle     E1 FastAPI, typing, tests
-                 foundations          order; arrays/hash                                                       
-                                      and/or next                                                              
-                                      incomplete topic                                                         
+               2 A2 collections       Continue official   C1 UML and modeling         D2 request lifecycle     E1 Pydantic, async,
+                 foundations          order; arrays/hash                                                       FastAPI, pytest
+                                      and/or next
+                                      incomplete topic
 
-               3 A2 HashMap internals Continue official   C2 SOLID                    D3 SQL/data modeling     E2 model API integration
-                 and comparators      order; two                                                               
-                                      pointers/sliding                                                         
-                                      window as                                                                
-                                      applicable                                                               
+               3 A2 HashMap internals Continue official   C2 SOLID                    D3 SQL/data modeling     E2 tokens, tokenizers,
+                 and comparators      order; two                                                               next-token prediction
+                                      pointers/sliding
+                                      window as
+                                      applicable
 
-               4 A3 streams and       Continue official   C2 refactoring exercise     D3 indexes/transactions  E2 streaming, timeouts, cost
-                 modern Java          order; binary                                                            
-                                      search/linked list                                                       
-                                      as applicable                                                            
+               4 A3 streams and       Continue official   C2 refactoring exercise     D3 indexes/transactions  E2 context window,
+                 modern Java          order; binary                                                            sampling, limits,
+                                      search/linked list                                                       hallucinations
+                                      as applicable
 
-               5 A4 threads and race  Continue official   C3                          D4 caching               E3 structured outputs
-                 conditions           order; linked       factory/builder/singleton                            
-                                      list/stack as                                                            
-                                      applicable                                                               
+               5 A4 threads and race  Continue official   C3                          D4 caching               E3 first LLM API app,
+                 conditions           order; linked       factory/builder/singleton                            streaming, token usage
+                                      list/stack as
+                                      applicable
 
-               6 A4 synchronization   Continue official   C3 implement patterns       D4 cache invalidation    E4 tool calling
-                 and JMM              order; stack/tree                                                        
-                                      as applicable                                                            
+               6 A4 synchronization   Continue official   C3 implement patterns       D4 cache invalidation    E3 retries, rate limits,
+                 and JMM              order; stack/tree                                                        context budgeting
+                                      as applicable
 
-               7 A5 locks,            Continue official   C4 adapter/decorator/facade D5 queues and Kafka      E4 tool execution and
-                 conditions,          order; trees/tries                              concepts                 idempotency
-                 executors            as applicable                                                            
+               7 A5 locks,            Continue official   C4 adapter/decorator/facade D5 queues and Kafka      E4 system prompts,
+                 conditions,          order; trees/tries                              concepts                 context engineering
+                 executors            as applicable
 
-               8 A5 CompletableFuture Continue official   C4 proxy/composite          D5 retries, DLQ, outbox  E5 embeddings and chunking
-                 and virtual threads  order;                                                                   
-                                      backtracking/heap                                                        
-                                      as applicable                                                            
+               8 A5 CompletableFuture Continue official   C4 proxy/composite          D5 retries, DLQ, outbox  E5 JSON / structured
+                 and virtual threads  order;                                                                   output + validation
+                                      backtracking/heap
+                                      as applicable
 
-               9 A6 JVM memory and    Continue official   C5 strategy/observer        D6 consistency and       E5 pgvector retrieval
-                 class loading        order; graph                                    replication              
-                                      foundations as                                                           
-                                      applicable                                                               
+               9 A6 JVM memory and    Continue official   C5 strategy/observer        D6 consistency and       E6 tool-calling loop,
+                 class loading        order; graph                                    replication              authz, idempotency
+                                      foundations as
+                                      applicable
 
-              10 A6 GC and memory     Continue official   C5 command/state/chain      D6 partial failures      E5 RAG evaluation
-                 troubleshooting      order; graphs                                                            
+              10 A6 GC and memory     Continue official   C5 command/state/chain      D6 partial failures      E6 build an MCP server,
+                 troubleshooting      order; graphs                                                            connect a client
 
-              11 A7 JFR and profiling Continue official   C6 first independent        D7 scaling and           E6 workflow state
-                                      order; advanced     project                     availability             
-                                      graphs                                                                   
+              11 A7 JFR and profiling Continue official   C6 first independent        D7 scaling and           E7 embeddings,
+                                      order; advanced     project                     availability             similarity search
+                                      graphs
 
-              12 A8 Spring DI and     Continue official   C6 second independent       D7 rate                  E6 checkpointing/HITL
-                 bean lifecycle       order; 1-D DP       project                     limiting/resilience      
+              12 A8 Spring DI and     Continue official   C6 second independent       D7 rate                  E7 vector DBs, pgvector,
+                 bean lifecycle       order; 1-D DP       project                     limiting/resilience      ANN, hybrid search
 
-              13 A8 proxies and       Continue official   C6 third project            D8                       E7 golden dataset
-                 transactions         order; 1-D DP                                   observability/security   
+              13 A8 proxies and       Continue official   C6 third project            D8                       E8 ingestion, parsing,
+                 transactions         order; 1-D DP                                   observability/security   chunking, metadata
 
-              14 A9 SQL               Continue official   C6 fourth project           D8 SLOs and tracing      E7 regression evaluation
-                 isolation/indexing   order; 2-D DP                                                            
+              14 A9 SQL               Continue official   C6 fourth project           D8 SLOs and tracing      E8 retrieval, reranking,
+                 isolation/indexing   order; 2-D DP                                                            citations
 
-              15 A9 idempotency and   Continue official   C7 testing and concurrency  D9 URL                   E8 prompt injection and
-                 locking              order; 2-D DP                                   shortener/notification   isolation
-                                                                                      design                   
+              15 A9 idempotency and   Continue official   C7 testing and concurrency  D9 URL                   E8 RAG failure modes;
+                 locking              order; 2-D DP                                   shortener/notification   vertical slice done
+                                                                                      design
 
-              16 A10 tests and        Continue official   C7 timed machine coding     D9 feed/chat design      E8 tool authorization
-                 production concerns  order;                                                                   
-                                      greedy/intervals                                                         
+              16 A10 tests and        Continue official   C7 timed machine coding     D9 feed/chat design      E9 golden dataset,
+                 production concerns  order;                                                                   error analysis
+                                      greedy/intervals
 
-              17 Java revision:       Continue official   Rebuild weakest LLD project D9 payment/order design  E9 cost and latency
-                 collections +        order; remaining                                                         
-                 concurrency          greedy/intervals                                                         
+              17 Java revision:       Continue official   Rebuild weakest LLD project D9 payment/order design  E9 RAG evals, LLM judge,
+                 collections +        order; remaining                                                         regression runs
+                 concurrency          greedy/intervals
 
-              18 Java revision: JVM + Continue official   Pattern selection drills    D9 search/scheduler      E9 tracing/fallbacks
-                 Spring               order; bit                                      design                   
-                                      manipulation                                                             
+              18 Java revision: JVM + Continue official   Pattern selection drills    D9 search/scheduler      E10 workflow patterns,
+                 Spring               order; bit                                      design                   chaining and routing
+                                      manipulation
 
-              19 Java mock interview  Close remaining     60--90 min machine coding   D10 architecture         E10 project hardening
-                                      official DSA                                    trade-offs               
-                                      categories as                                                            
-                                      feasible                                                                 
+              19 Java mock interview  Close remaining     60--90 min machine coding   D10 architecture         E10 agent loop, memory,
+                                      official DSA                                    trade-offs               bounded autonomy
+                                      categories as
+                                      feasible
 
-              20 Weak-area            Timed NeetCode      LLD mock 1                  HLD mock 1               E10
-                 remediation          re-solves                                                                deployment/reproducibility
+              20 Weak-area            Timed NeetCode      LLD mock 1                  HLD mock 1               E10 LangGraph state,
+                 remediation          re-solves                                                                checkpoints, HITL
 
-              21 Java concurrency     Timed NeetCode      LLD mock 2                  HLD mock 2               E10 evaluation report
-                 mock                 re-solves                                                                
+              21 Java concurrency     Timed NeetCode      LLD mock 2                  HLD mock 2               E11 prompt injection,
+                 mock                 re-solves                                                                isolation, tool authz
 
-              22 Spring/JVM deep      Weak-problem        LLD mock 3                  HLD mock 3               E10 security review
-                 revision             revision                                                                 
+              22 Spring/JVM deep      Weak-problem        LLD mock 3                  HLD mock 3               E12 cost, latency,
+                 revision             revision                                                                 caching, tracing
 
-              23 Java mixed interview Mixed timed set     Explain project design      Design unfamiliar system Project technical
-                 set                  from NeetCode only                                                       walkthrough
+              23 Java mixed interview Mixed timed set     Explain project design      Design unfamiliar system E13 AI-assisted dev;
+                 set                  from NeetCode only                                                       capstone hardening
 
-              24 Java flash recall +  Re-solve weak       Rebuild one project from    Revise weak design areas Fix weakest evaluation cases
-                 coding               high-priority       blank                                                
-                                      problems                                                                 
+              24 Java flash recall +  Re-solve weak       Rebuild one project from    Revise weak design areas E14 fix weakest eval
+                 coding               high-priority       blank                                                cases; agent evals
+                                      problems
 
-              25 Full Java mock       Timed DSA mock      Timed LLD mock              Timed HLD mock           Cost/latency and failure
-                                                                                                               drill
+              25 Full Java mock       Timed DSA mock      Timed LLD mock              Timed HLD mock           E14 failure drill;
+                                                                                                               AI mock interview
 
-              26 Final interview      Final NeetCode 250  Final design review         Final design review      Final demo and architecture
-                 consolidation        status + weak list                                                       review
+              26 Final interview      Final NeetCode 250  Final design review         Final design review      E14 final demo and
+                 consolidation        status + weak list                                                       architecture review
   -----------------------------------------------------------------------------------------------------------------------------------------
 
 ### How to interpret the DSA column
@@ -2265,7 +2479,7 @@ two tracks.
   LLD implementation                       45--90 min
   HLD concept                              30--45 min
   HLD design exercise                      45--60 min
-  FDE concept + implementation             45--90 min
+  AI concept + implementation              45--90 min
   Weekly review                                30 min
 
 ## 10.3 Revision intervals
@@ -2364,7 +2578,7 @@ Track outcome quality, not only time spent.
                           trade-offs defended     designs and 3 timed
                                                   mocks
 
-  FDE                     Working increments,     One coherent AI-enabled
+  AI upskilling           Working increments,     One coherent AI-enabled
                           evaluation quality,     application with tests,
                           reliability             evaluation, security
                                                   considerations,
@@ -2384,7 +2598,7 @@ Track outcome quality, not only time spent.
 3.  Which topic did I only recognize while reading, but cannot
     reproduce?
 4.  Which DSA problems failed during revision, and why?
-5.  What did I ship in the FDE project?
+5.  What did I ship in the AI capstone, and what did my evals show?
 6.  What is the single biggest blocker for next week?
 7.  Is the current weekly workload sustainable?
 
@@ -2393,7 +2607,7 @@ Track outcome quality, not only time spent.
 At the end of each four-week block: - Take one Java mock or oral
 question session. - Take one timed DSA session using only NeetCode 250
 problems. - Complete one LLD or HLD design exercise. - Demonstrate one
-tangible FDE project improvement. - Remove or defer low-value topics if
+tangible AI capstone improvement. - Remove or defer low-value topics if
 the workload is not sustainable. - Begin/continue targeted job
 applications; do not wait for the roadmap to be fully complete.
 
@@ -2453,17 +2667,31 @@ collection into another project.
 -   [Google SRE books](https://sre.google/books/) --- operational
     excellence, SLOs and reliability.
 
-## FDE / AI Engineering
+## AI Engineering
 
 -   [OpenAI developer
     documentation](https://developers.openai.com/api/docs/) --- APIs,
-    Responses, tools, structured outputs and embeddings.
+    tools, structured outputs and embeddings.
+-   [Anthropic documentation](https://docs.claude.com) --- Claude API,
+    prompting, tool use and citations.
 -   [Anthropic --- Building effective
     agents](https://www.anthropic.com/research/building-effective-agents)
     --- workflow/agent distinction and simplicity-first design.
+-   [Anthropic --- Effective context engineering for
+    agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
+-   [Model Context Protocol](https://modelcontextprotocol.io) --- spec,
+    SDKs and server/client guides.
 -   [LangGraph
     documentation](https://docs.langchain.com/oss/python/langgraph/) ---
     stateful workflows, persistence and orchestration.
+-   [Hugging Face LLM Course](https://huggingface.co/learn/llm-course)
+    --- tokenizers and transformer fundamentals.
+-   Andrej Karpathy's *Intro to Large Language Models* and tokenizer
+    videos; 3Blue1Brown transformer videos.
+-   *AI Engineering* --- Chip Huyen; broad applied reference for
+    foundation models, RAG, evals and production.
+-   [Hamel Husain --- Your AI Product Needs
+    Evals](https://hamel.dev/blog/posts/evals/).
 -   [FastAPI tutorial](https://fastapi.tiangolo.com/tutorial/) ---
     Python API service.
 -   [pgvector](https://github.com/pgvector/pgvector) --- vector
@@ -2483,8 +2711,8 @@ months. The objective is to build a credible, interview-ready profile:
 
 > **A strong backend engineer who understands Java and distributed
 > systems deeply, can solve algorithmic problems reliably, can design
-> maintainable services, and can build production-minded AI
-> applications.**
+> maintainable services, and understands how LLMs work, and can
+> build, evaluate and secure production-minded AI applications.**
 
 Three rules matter most:
 
@@ -2511,8 +2739,9 @@ This roadmap was prepared using the official NeetCode 250 page, the
 Coder Army LLD playlist and companion repository, Java/Dev.java
 documentation, the Java specifications, Spring documentation, System
 Design Primer, AWS Well-Architected guidance, OpenAI developer
-documentation, Anthropic's agent engineering guidance, LangGraph
-documentation and pgvector documentation.
+documentation, Anthropic's agent and context engineering guidance,
+Model Context Protocol documentation, LangGraph documentation and
+pgvector documentation.
 
 -   NeetCode 250 official counts and topic groups:
     https://neetcode.io/practice/practice/neetcode250
@@ -2522,6 +2751,7 @@ documentation and pgvector documentation.
     https://github.com/donnemartin/system-design-primer
 -   Anthropic agent guidance:
     https://www.anthropic.com/research/building-effective-agents
+-   Model Context Protocol: https://modelcontextprotocol.io
 -   Java learning resources: https://dev.java/learn/
 -   AWS Well-Architected:
     https://docs.aws.amazon.com/wellarchitected/latest/userguide/waf.html

@@ -132,7 +132,7 @@ export default function Roadmap({ onNavigate }: RoadmapProps) {
         <div>
           <h2 className="text-2xl font-bold">Roadmap</h2>
           <p className="text-muted-foreground">
-            26-week curriculum across Java, DSA, LLD, HLD and FDE tracks.
+            26-week curriculum across Java, DSA, LLD, HLD and AI Upskilling tracks.
           </p>
         </div>
         <div className="flex flex-col items-start gap-1 sm:items-end">
