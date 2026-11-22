@@ -10,7 +10,7 @@ import {
   toISODate,
 } from '@/lib/dates'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 
 const isTauri =
   typeof window !== 'undefined' &&

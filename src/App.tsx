@@ -7,8 +7,10 @@ import Review from '@/features/review/Review'
 import DSA from '@/features/dsa/DSA'
 import Workspace from '@/features/workspace/Workspace'
 import Projects from '@/features/projects/Projects'
+import Analytics from '@/features/analytics/Analytics'
+import Search from '@/features/search/Search'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 type Theme = 'dark' | 'light' | 'system'
 
 export default function App() {
@@ -39,6 +41,10 @@ export default function App() {
         <Workspace onNavigate={setPage} />
       ) : page === 'projects' ? (
         <Projects onNavigate={setPage} />
+      ) : page === 'analytics' ? (
+        <Analytics onNavigate={setPage} />
+      ) : page === 'search' ? (
+        <Search onNavigate={setPage} />
       ) : (
         <Roadmap onNavigate={setPage} />
       )}

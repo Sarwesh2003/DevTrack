@@ -9,6 +9,7 @@ mod migrations;
 mod planner;
 mod projects;
 mod roadmap_import;
+mod analytics;
 mod state;
 mod workspace;
 
@@ -89,6 +90,9 @@ fn main() {
       projects::upsert_project_note,
       projects::get_project_detail,
       projects::seed_fde_project,
+      analytics::search_all,
+      analytics::export_all,
+      analytics::get_analytics,
     ])
     .setup(|_app| {
       let _ = db::init_data_dir()?;

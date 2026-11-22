@@ -976,3 +976,71 @@ export interface ProjectDetailResponse {
   notes: ProjectNote[]
   error?: string
 }
+
+// ---------------------------------------------------------------------------
+// Analytics / search / export (Phase 7)
+// ---------------------------------------------------------------------------
+
+export interface SearchResult {
+  type: string
+  id: string
+  title: string
+  subtitle?: string
+  track?: string
+}
+
+export interface SearchResponse {
+  ok: boolean
+  results: SearchResult[]
+  error?: string
+}
+
+export interface ExportResponse {
+  ok: boolean
+  destination: string
+  error?: string
+}
+
+export interface TrackProgress {
+  track: string
+  total_topics: number
+  completed: number
+  in_progress: number
+  not_started: number
+  avg_confidence: number | null
+}
+
+export interface PlannedVsActual {
+  planned_minutes: number
+  actual_minutes: number
+  task_count: number
+  completed_count: number
+}
+
+export interface RevisionStats {
+  total_items: number
+  due_count: number
+  overdue_count: number
+  avg_confidence: number | null
+}
+
+export interface AttemptStats {
+  total: number
+  solved: number
+  avg_duration_minutes: number | null
+}
+
+export interface ActivityStats {
+  total_events: number
+  active_days_last30: number
+}
+
+export interface AnalyticsResponse {
+  ok: boolean
+  track_progress: TrackProgress[]
+  planned_vs_actual: PlannedVsActual
+  revision: RevisionStats
+  attempts: AttemptStats
+  activity: ActivityStats
+  error?: string
+}

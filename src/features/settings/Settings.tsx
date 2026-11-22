@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSettings } from '@/services/useSettings'
 import { WEEKDAY_LABELS } from '@/lib/dates'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 type Theme = 'dark' | 'light' | 'system'
 
 const TRACK_OPTIONS: { handle: string; label: string }[] = [

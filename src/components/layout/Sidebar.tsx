@@ -1,5 +1,5 @@
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 
 const navItems: { label: string; page: Page }[] = [
   { label: 'Today', page: 'dashboard' },
@@ -7,6 +7,8 @@ const navItems: { label: string; page: Page }[] = [
   { label: 'DSA', page: 'dsa' },
   { label: 'Workspace', page: 'workspace' },
   { label: 'Projects', page: 'projects' },
+  { label: 'Analytics', page: 'analytics' },
+  { label: 'Search', page: 'search' },
   { label: 'Weekly Review', page: 'review' },
   { label: 'Settings', page: 'settings' },
 ]

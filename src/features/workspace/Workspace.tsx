@@ -19,7 +19,7 @@ import type {
 
 type Tab = 'experiment' | 'recall' | 'diagram' | 'design' | 'case' | 'links'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 
 const TAB_LABELS: Record<Tab, string> = {
   experiment: 'Experiment',

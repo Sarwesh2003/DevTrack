@@ -423,4 +423,30 @@ describe('api service', () => {
     await api.seedFdeProject()
     expect(mockInvoke).toHaveBeenCalledWith('seed_fde_project', {})
   })
+
+  it('searchAll sends the query', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, results: [], error: undefined })
+    await api.searchAll('binary search')
+    expect(mockInvoke).toHaveBeenCalledWith('search_all', { query: 'binary search' })
+  })
+
+  it('exportAll sends the destination', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, destination: '/tmp/export', error: undefined })
+    await api.exportAll('/tmp/export')
+    expect(mockInvoke).toHaveBeenCalledWith('export_all', { destination: '/tmp/export' })
+  })
+
+  it('getAnalytics sends no args', async () => {
+    mockInvoke.mockResolvedValue({
+      ok: true,
+      track_progress: [],
+      planned_vs_actual: { planned_minutes: 0, actual_minutes: 0, task_count: 0, completed_count: 0 },
+      revision: { total_items: 0, due_count: 0, overdue_count: 0, avg_confidence: null },
+      attempts: { total: 0, solved: 0, avg_duration_minutes: null },
+      activity: { total_events: 0, active_days_last30: 0 },
+      error: undefined,
+    })
+    await api.getAnalytics()
+    expect(mockInvoke).toHaveBeenCalledWith('get_analytics', undefined)
+  })
 })

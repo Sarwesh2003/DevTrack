@@ -99,6 +99,16 @@
 - `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — project types, command wrappers and API-shape tests
 - `docs/PHASE_6_REPORT.md`
 
+## Phase 7 deliverables (complete)
+- `src-tauri/src/analytics.rs` — search_all, export_all, get_analytics commands (search across content; export DB + content dir; per-track progress, planned vs actual, revision, attempts, activity stats)
+- `src-tauri/src/main.rs` — `analytics` module and all analytics command registrations
+- `src/features/analytics/Analytics.tsx` — Analytics page: stat cards and per-track progress table
+- `src/features/search/Search.tsx` — Search page: global search across topics, problems, projects, experiments, questions, designs, case studies, notes, entries
+- `src/App.tsx`, `src/components/layout/Sidebar.tsx`, `src/components/layout/Shell.tsx` — `analytics` and `search` page routes and nav
+- `src/features/dashboard/Dashboard.tsx`, `src/features/settings/Settings.tsx`, `src/features/roadmap/Roadmap.tsx`, `src/features/review/Review.tsx`, `src/features/dsa/DSA.tsx`, `src/features/workspace/Workspace.tsx`, `src/features/projects/Projects.tsx` — updated Page types for new routes
+- `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — analytics/search/export types, command wrappers and API-shape tests
+- `docs/PHASE_7_REPORT.md`
+
 ## Roadmap source (present)
 - `docs/roadmap/six_month_engineering_roadmap.md` — complete 26-week roadmap imported and validated as a planning reference.
 - `docs/roadmap/CURRENT_PROGRESS.yaml` — per-track progress checkpoints (DSA through Trees, LLD through Composite).

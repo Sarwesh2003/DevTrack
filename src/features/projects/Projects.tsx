@@ -12,7 +12,7 @@ import type {
   ProjectDetailResponse,
 } from '@/types'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 
 const TRACKS = [
   { key: '', name: 'All tracks' },

@@ -68,7 +68,7 @@ Implemented one approved phase at a time from `docs/DEVTRACK_IMPLEMENTATION_PLAN
 4. NeetCode 250 workspace, attempt/code/notes storage and revision engine (Phase 4 — complete)
 5. Core Java, LLD and HLD learning workspaces (Phase 5 — complete)
 6. FDE learning workspace and project portfolio (Phase 6 — complete)
-7. Analytics, global search, backup/export polish and QA
+7. Analytics, global search, backup/export polish and QA (Phase 7 — complete)
 8. Optional GitHub/LeetCode integrations
 
 ## Getting started
@@ -86,7 +86,7 @@ Prerequisites (Mac): Node.js, npm or pnpm, Rust toolchain, Xcode command-line to
 
 ### Next step
 
-Proceed to Phase 7 (analytics, global search, backup/export polish and QA) after Phase 6 approval.
+All core phases (0–7) are complete. Proceed to Phase 8 (optional GitHub/LeetCode integrations) only if desired.
 
 ## Rules (see AGENTS.md)
 

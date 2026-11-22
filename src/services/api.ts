@@ -82,6 +82,10 @@ import {
   UpsertProjectLinkRequest,
   UpsertProjectNoteRequest,
   ProjectDetailResponse,
+  // Analytics / search / export (Phase 7)
+  SearchResponse,
+  ExportResponse,
+  AnalyticsResponse,
 } from '@/types'
 
 declare global {
@@ -310,6 +314,21 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
       return { ok: true, id: '', error: undefined } as T
     case 'seed_fde_project':
       return { ok: true, id: '', error: undefined } as T
+    // Analytics / search / export (Phase 7)
+    case 'search_all':
+      return { ok: true, results: [], error: undefined } as T
+    case 'export_all':
+      return { ok: true, destination: '', error: undefined } as T
+    case 'get_analytics':
+      return {
+        ok: true,
+        track_progress: [],
+        planned_vs_actual: { planned_minutes: 0, actual_minutes: 0, task_count: 0, completed_count: 0 },
+        revision: { total_items: 0, due_count: 0, overdue_count: 0, avg_confidence: null },
+        attempts: { total: 0, solved: 0, avg_duration_minutes: null },
+        activity: { total_events: 0, active_days_last30: 0 },
+        error: undefined,
+      } as T
     default:
       throw new Error(`Unknown command: ${cmd}`)
   }
@@ -465,4 +484,9 @@ export const api = {
   getProjectDetail: (id: string) =>
     invoke<ProjectDetailResponse>('get_project_detail', { id }),
   seedFdeProject: () => invoke<UpsertResponse>('seed_fde_project', {}),
+
+  // Analytics / search / export (Phase 7)
+  searchAll: (query: string) => invoke<SearchResponse>('search_all', { query }),
+  exportAll: (destination: string) => invoke<ExportResponse>('export_all', { destination }),
+  getAnalytics: () => invoke<AnalyticsResponse>('get_analytics'),
 }

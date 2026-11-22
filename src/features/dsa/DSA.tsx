@@ -11,7 +11,7 @@ import type {
   Attempt,
 } from '@/types'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects' | 'analytics' | 'search'
 type Tab = 'questions' | 'revision' | 'progress'
 type CoverFilter = 'all' | 'new' | 'revision'
 
