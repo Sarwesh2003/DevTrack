@@ -1,6 +1,7 @@
 use crate::db::{app_data_dir, open_connection};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -32,168 +33,171 @@ pub async fn search_all(query: String) -> SearchResponse {
   };
   let _ = crate::migrations::ensure_schema(&mut conn);
 
-  let q = format!("%{}%", query);
-  let mut results: Vec<SearchResult> = vec![];
-
-  // Topics (joined through modules -> tracks for track name)
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT t.id, t.title, t.key, tr.name FROM topics t
-     JOIN modules m ON t.module_id = m.id
-     JOIN tracks tr ON m.track_id = tr.id
-     WHERE t.title LIKE ?1 OR t.key LIKE ?1
-     ORDER BY tr.position, m.position, t.position LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q], |row| {
-      Ok(SearchResult {
-        r#type: "topic".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(format!("{} · {}", row.get::<_, Option<String>>(2)?.unwrap_or_default(), row.get::<_, String>(3)?)),
-        track: Some(row.get(3)?),
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
+  let keywords: Vec<String> = query
+    .split_whitespace()
+    .map(|w| w.to_lowercase())
+    .filter(|w| !w.is_empty())
+    .collect();
+  if keywords.is_empty() {
+    return SearchResponse { ok: true, results: vec![], error: None };
   }
 
-  // Problems
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, title, category, difficulty FROM problems WHERE title LIKE ?1 ORDER BY category_order LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q], |row| {
-      Ok(SearchResult {
-        r#type: "problem".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(format!("{} · {}", row.get::<_, String>(2)?, row.get::<_, String>(3)?)),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
+  let mut found: HashMap<(String, String), SearchResult> = HashMap::new();
+
+  let insert = |found: &mut HashMap<(String, String), SearchResult>, r: SearchResult| {
+    found.entry((r.r#type.clone(), r.id.clone())).or_insert(r);
+  };
+
+  let run = |conn: &mut rusqlite::Connection,
+             pattern: &str,
+             sql: &str,
+             found: &mut HashMap<(String, String), SearchResult>,
+             map: fn(&rusqlite::Row<'_>) -> rusqlite::Result<SearchResult>| {
+    if let Ok(mut stmt) = conn.prepare(sql) {
+      if let Ok(rows) = stmt.query_map(params![pattern], map) {
+        for r in rows.flatten() {
+          insert(found, r);
+        }
+      }
     }
+  };
+
+  for kw in &keywords {
+    let pattern = format!("%{}%", kw);
+
+    // Topics (joined through modules -> tracks for track name)
+    run(&mut conn, &pattern,
+        "SELECT t.id, t.title, t.key, tr.name FROM topics t
+         JOIN modules m ON t.module_id = m.id
+         JOIN tracks tr ON m.track_id = tr.id
+         WHERE LOWER(t.title) LIKE LOWER(?1) OR LOWER(t.key) LIKE LOWER(?1)
+         ORDER BY tr.position, m.position, t.position LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "topic".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(format!("{} · {}", row.get::<_, Option<String>>(2)?.unwrap_or_default(), row.get::<_, String>(3)?)),
+            track: Some(row.get(3)?),
+          })
+        });
+
+    // Problems
+    run(&mut conn, &pattern,
+        "SELECT id, title, category, difficulty FROM problems WHERE LOWER(title) LIKE LOWER(?1) ORDER BY category_order LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "problem".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(format!("{} · {}", row.get::<_, String>(2)?, row.get::<_, String>(3)?)),
+            track: None,
+          })
+        });
+
+    // Projects
+    run(&mut conn, &pattern,
+        "SELECT id, name, track, slug FROM projects WHERE LOWER(name) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "project".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(format!("{} · {}", row.get::<_, String>(2)?, row.get::<_, String>(3)?)),
+            track: Some(row.get(2)?),
+          })
+        });
+
+    // Code experiments
+    run(&mut conn, &pattern,
+        "SELECT id, title, language FROM code_experiments WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(code) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "experiment".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(row.get::<_, String>(2)?),
+            track: None,
+          })
+        });
+
+    // Recall questions
+    run(&mut conn, &pattern,
+        "SELECT id, question, difficulty FROM recall_questions WHERE LOWER(question) LIKE LOWER(?1) OR LOWER(answer) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "question".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(row.get::<_, String>(2)?),
+            track: None,
+          })
+        });
+
+    // Design artifacts
+    run(&mut conn, &pattern,
+        "SELECT id, title FROM design_artifacts WHERE LOWER(title) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "design".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some("LLD design artifact".to_string()),
+            track: None,
+          })
+        });
+
+    // Case studies
+    run(&mut conn, &pattern,
+        "SELECT id, title FROM case_studies WHERE LOWER(title) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "case_study".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some("HLD case study".to_string()),
+            track: None,
+          })
+        });
+
+    // Project notes
+    run(&mut conn, &pattern,
+        "SELECT id, title, kind, content FROM project_notes WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(content) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "note".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(format!("{} · {}", row.get::<_, String>(2)?, "project note")),
+            track: None,
+          })
+        });
+
+    // Learning entries
+    run(&mut conn, &pattern,
+        "SELECT id, title, description FROM learning_entries WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(description) LIKE LOWER(?1) ORDER BY entry_date DESC LIMIT 50",
+        &mut found,
+        |row| {
+          Ok(SearchResult {
+            r#type: "entry".to_string(),
+            id: row.get(0)?,
+            title: row.get(1)?,
+            subtitle: Some(row.get::<_, Option<String>>(2)?.unwrap_or_default()),
+            track: None,
+          })
+        });
   }
 
-  // Projects
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, name, track, slug FROM projects WHERE name LIKE ?1 ORDER BY updated_at DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q], |row| {
-      Ok(SearchResult {
-        r#type: "project".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(format!("{} · {}", row.get::<_, String>(2)?, row.get::<_, String>(3)?)),
-        track: Some(row.get(2)?),
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
-  // Code experiments
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, title, language FROM code_experiments WHERE title LIKE ?1 OR code LIKE ?1 ORDER BY updated_at DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q, &q], |row| {
-      Ok(SearchResult {
-        r#type: "experiment".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(row.get::<_, String>(2)?),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
-  // Recall questions
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, question, difficulty FROM recall_questions WHERE question LIKE ?1 OR answer LIKE ?1 ORDER BY updated_at DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q, &q], |row| {
-      Ok(SearchResult {
-        r#type: "question".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(row.get::<_, String>(2)?),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
-  // Design artifacts
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, title FROM design_artifacts WHERE title LIKE ?1 ORDER BY updated_at DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q], |row| {
-      Ok(SearchResult {
-        r#type: "design".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some("LLD design artifact".to_string()),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
-  // Case studies
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, title FROM case_studies WHERE title LIKE ?1 ORDER BY updated_at DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q], |row| {
-      Ok(SearchResult {
-        r#type: "case_study".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some("HLD case study".to_string()),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
-  // Project notes
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, title, kind, content FROM project_notes WHERE title LIKE ?1 OR content LIKE ?1 ORDER BY updated_at DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q, &q], |row| {
-      Ok(SearchResult {
-        r#type: "note".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(format!("{} · {}", row.get::<_, String>(2)?, "project note")),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
-  // Learning entries
-  if let Ok(mut stmt) = conn.prepare(
-    "SELECT id, title, description FROM learning_entries WHERE title LIKE ?1 OR description LIKE ?1 ORDER BY entry_date DESC LIMIT 50",
-  ) {
-    if let Ok(rows) = stmt.query_map(params![&q, &q], |row| {
-      Ok(SearchResult {
-        r#type: "entry".to_string(),
-        id: row.get(0)?,
-        title: row.get(1)?,
-        subtitle: Some(row.get::<_, Option<String>>(2)?.unwrap_or_default()),
-        track: None,
-      })
-    }) {
-      for r in rows.flatten() { results.push(r); }
-    }
-  }
-
+  let mut results: Vec<SearchResult> = found.into_values().collect();
   results.sort_by(|a, b| a.title.cmp(&b.title));
-  results.dedup_by(|a, b| a.id == b.id && a.r#type == b.r#type);
   results.truncate(100);
 
   SearchResponse { ok: true, results, error: None }
