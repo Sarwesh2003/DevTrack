@@ -375,6 +375,35 @@ CREATE TABLE topic_links (
 );
 ```
 
+## 7c. Project portfolio extensions (Phase 6, migration v6)
+
+Added by `SCHEMA_VERSION = 6` (`fde_projects`). The `projects`,
+`project_milestones` and `project_links` tables already exist from the initial schema;
+v6 adds task tracking and a typed notes journal.
+
+```sql
+CREATE TABLE IF NOT EXISTS project_tasks (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'todo',
+  due_date TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS project_notes (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL DEFAULT 'note',
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+```
+
 ## 8. Content files, activity, settings, import, migrations
 ```sql
 CREATE TABLE content_files (

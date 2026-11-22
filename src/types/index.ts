@@ -850,3 +850,129 @@ export interface SaveWorkspaceFileResponse {
   file_path?: string
   error?: string
 }
+
+// ---------------------------------------------------------------------------
+// Projects / FDE portfolio (Phase 6)
+// ---------------------------------------------------------------------------
+
+export interface Project {
+  id: string
+  track: string
+  name: string
+  slug: string
+  status: string
+  repo_url?: string
+  local_path?: string
+  readme?: string
+  milestone?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertProjectRequest {
+  id?: string
+  track: string
+  name: string
+  slug?: string
+  status?: string
+  repo_url?: string
+  local_path?: string
+  readme?: string
+  milestone?: string
+  notes?: string
+}
+
+export interface ProjectResponse {
+  ok: boolean
+  project: Project | null
+  error?: string
+}
+
+export interface ListProjectsResponse {
+  ok: boolean
+  projects: Project[]
+  error?: string
+}
+
+export interface ProjectMilestone {
+  id: string
+  project_id: string
+  name: string
+  is_complete: boolean
+  due_date?: string
+  notes?: string
+}
+
+export interface UpsertProjectMilestoneRequest {
+  id?: string
+  project_id: string
+  name: string
+  is_complete?: boolean
+  due_date?: string
+  notes?: string
+}
+
+export interface ProjectTask {
+  id: string
+  project_id: string
+  title: string
+  status: string
+  due_date?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertProjectTaskRequest {
+  id?: string
+  project_id: string
+  title: string
+  status?: string
+  due_date?: string
+  notes?: string
+}
+
+export interface ProjectLink {
+  id: string
+  project_id: string
+  title: string
+  url: string
+  link_type?: string
+}
+
+export interface UpsertProjectLinkRequest {
+  id?: string
+  project_id: string
+  title: string
+  url: string
+  link_type?: string
+}
+
+export interface ProjectNote {
+  id: string
+  project_id: string
+  kind: string
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertProjectNoteRequest {
+  id?: string
+  project_id: string
+  kind?: string
+  title: string
+  content: string
+}
+
+export interface ProjectDetailResponse {
+  ok: boolean
+  project: Project | null
+  milestones: ProjectMilestone[]
+  tasks: ProjectTask[]
+  links: ProjectLink[]
+  notes: ProjectNote[]
+  error?: string
+}

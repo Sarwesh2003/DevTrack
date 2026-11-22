@@ -356,4 +356,71 @@ describe('api service', () => {
       req: { subdir: 'experiments', topic_id: 't-1', file_name: 'A.java', content: 'class A {}' },
     })
   })
+
+  it('listProjects sends optional track', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, projects: [], error: undefined })
+    await api.listProjects('E')
+    expect(mockInvoke).toHaveBeenCalledWith('list_projects', { track: 'E' })
+    mockInvoke.mockResolvedValue({ ok: true, projects: [], error: undefined })
+    await api.listProjects()
+    expect(mockInvoke).toHaveBeenCalledWith('list_projects', {})
+  })
+
+  it('getProject sends id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, project: null, error: undefined })
+    await api.getProject('p-1')
+    expect(mockInvoke).toHaveBeenCalledWith('get_project', { id: 'p-1' })
+  })
+
+  it('upsertProject nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'p-1' })
+    await api.upsertProject({ track: 'E', name: 'FDE Capstone', slug: 'fde-capstone', status: 'active' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_project', {
+      req: { track: 'E', name: 'FDE Capstone', slug: 'fde-capstone', status: 'active' },
+    })
+  })
+
+  it('upsertProjectMilestone nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'm-1' })
+    await api.upsertProjectMilestone({ project_id: 'p-1', name: 'M1 \u2014 Problem', is_complete: false })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_project_milestone', {
+      req: { project_id: 'p-1', name: 'M1 \u2014 Problem', is_complete: false },
+    })
+  })
+
+  it('upsertProjectTask nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 't-1' })
+    await api.upsertProjectTask({ project_id: 'p-1', title: 'Setup repo', status: 'todo' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_project_task', {
+      req: { project_id: 'p-1', title: 'Setup repo', status: 'todo' },
+    })
+  })
+
+  it('upsertProjectLink nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'l-1' })
+    await api.upsertProjectLink({ project_id: 'p-1', title: 'Doc', url: 'https://x', link_type: 'doc' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_project_link', {
+      req: { project_id: 'p-1', title: 'Doc', url: 'https://x', link_type: 'doc' },
+    })
+  })
+
+  it('upsertProjectNote nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'n-1' })
+    await api.upsertProjectNote({ project_id: 'p-1', kind: 'evaluation', title: 'Review', content: 'Good' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_project_note', {
+      req: { project_id: 'p-1', kind: 'evaluation', title: 'Review', content: 'Good' },
+    })
+  })
+
+  it('getProjectDetail sends id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, project: null, milestones: [], tasks: [], links: [], notes: [], error: undefined })
+    await api.getProjectDetail('p-1')
+    expect(mockInvoke).toHaveBeenCalledWith('get_project_detail', { id: 'p-1' })
+  })
+
+  it('seedFdeProject sends empty args', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'p-1' })
+    await api.seedFdeProject()
+    expect(mockInvoke).toHaveBeenCalledWith('seed_fde_project', {})
+  })
 })

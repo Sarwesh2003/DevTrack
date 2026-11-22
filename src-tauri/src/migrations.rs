@@ -1,7 +1,7 @@
 use crate::db::{now_rfc3339, DbResult};
 use rusqlite::Connection;
 
-pub const SCHEMA_VERSION: i32 = 5;
+pub const SCHEMA_VERSION: i32 = 6;
 
 pub fn ensure_schema(conn: &mut Connection) -> DbResult<()> {
   conn.execute_batch(
@@ -500,6 +500,45 @@ fn apply_migration(conn: &mut Connection, version: i32) -> DbResult<()> {
       tx.execute(
         "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
         rusqlite::params![version, "learning_workspaces", now],
+      )?;
+    }
+    6 => {
+      // Phase 6: FDE/project portfolio. The `projects`, `project_milestones`
+      // and `project_links` tables already exist from the initial schema; add
+      // project tasks and a typed notes journal (evaluations, security,
+      // reliability, cost/latency findings, walkthroughs, evidence).
+      tx.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS project_tasks (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'todo',
+          due_date TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS project_notes (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL DEFAULT 'note',
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_project_milestones_project ON project_milestones(project_id);
+        CREATE INDEX IF NOT EXISTS idx_project_links_project ON project_links(project_id);
+        CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id);
+        CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id);
+        ",
+      )?;
+
+      let now = now_rfc3339();
+      tx.execute(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
+        rusqlite::params![version, "fde_projects", now],
       )?;
     }
     _ => {

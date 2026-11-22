@@ -90,6 +90,15 @@
 - `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — workspace types, command wrappers and API-shape tests
 - `docs/PHASE_5_REPORT.md`
 
+## Phase 6 deliverables (complete)
+- `src-tauri/src/migrations.rs` — `SCHEMA_VERSION = 6`; v6 `fde_projects` adds `project_tasks` and `project_notes`
+- `src-tauri/src/projects.rs` — projects, milestones, tasks, links, notes journal, aggregated detail, idempotent FDE project seed (M1–M6)
+- `src-tauri/src/main.rs` — `projects` module and all project command registrations
+- `src/features/projects/Projects.tsx` — Projects page: track filter, project list/create, FDE seed, project detail with milestones, tasks, links and typed notes journal
+- `src/App.tsx`, `src/components/layout/Sidebar.tsx`, `src/components/layout/Shell.tsx` — `projects` page route and nav
+- `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — project types, command wrappers and API-shape tests
+- `docs/PHASE_6_REPORT.md`
+
 ## Roadmap source (present)
 - `docs/roadmap/six_month_engineering_roadmap.md` — complete 26-week roadmap imported and validated as a planning reference.
 - `docs/roadmap/CURRENT_PROGRESS.yaml` — per-track progress checkpoints (DSA through Trees, LLD through Composite).

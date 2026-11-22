@@ -1,11 +1,12 @@
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects'
 
 const navItems: { label: string; page: Page }[] = [
   { label: 'Today', page: 'dashboard' },
   { label: 'Roadmap', page: 'roadmap' },
   { label: 'DSA', page: 'dsa' },
   { label: 'Workspace', page: 'workspace' },
+  { label: 'Projects', page: 'projects' },
   { label: 'Weekly Review', page: 'review' },
   { label: 'Settings', page: 'settings' },
 ]

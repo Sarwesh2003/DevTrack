@@ -7,6 +7,7 @@ mod dsa;
 mod learning;
 mod migrations;
 mod planner;
+mod projects;
 mod roadmap_import;
 mod state;
 mod workspace;
@@ -79,6 +80,15 @@ fn main() {
       workspace::add_topic_link,
       workspace::list_topic_links,
       workspace::save_workspace_file,
+      projects::list_projects,
+      projects::get_project,
+      projects::upsert_project,
+      projects::upsert_project_milestone,
+      projects::upsert_project_task,
+      projects::upsert_project_link,
+      projects::upsert_project_note,
+      projects::get_project_detail,
+      projects::seed_fde_project,
     ])
     .setup(|_app| {
       let _ = db::init_data_dir()?;

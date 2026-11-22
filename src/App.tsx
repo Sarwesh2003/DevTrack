@@ -6,8 +6,9 @@ import Roadmap from '@/features/roadmap/Roadmap'
 import Review from '@/features/review/Review'
 import DSA from '@/features/dsa/DSA'
 import Workspace from '@/features/workspace/Workspace'
+import Projects from '@/features/projects/Projects'
 
-type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace'
+type Page = 'dashboard' | 'settings' | 'roadmap' | 'review' | 'dsa' | 'workspace' | 'projects'
 type Theme = 'dark' | 'light' | 'system'
 
 export default function App() {
@@ -36,6 +37,8 @@ export default function App() {
         <DSA onNavigate={setPage} />
       ) : page === 'workspace' ? (
         <Workspace onNavigate={setPage} />
+      ) : page === 'projects' ? (
+        <Projects onNavigate={setPage} />
       ) : (
         <Roadmap onNavigate={setPage} />
       )}

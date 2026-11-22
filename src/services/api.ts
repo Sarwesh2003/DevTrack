@@ -73,6 +73,15 @@ import {
   ListTopicLinksResponse,
   SaveWorkspaceFileRequest,
   SaveWorkspaceFileResponse,
+  // Projects / FDE (Phase 6)
+  UpsertProjectRequest,
+  ProjectResponse,
+  ListProjectsResponse,
+  UpsertProjectMilestoneRequest,
+  UpsertProjectTaskRequest,
+  UpsertProjectLinkRequest,
+  UpsertProjectNoteRequest,
+  ProjectDetailResponse,
 } from '@/types'
 
 declare global {
@@ -282,6 +291,25 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
       return { ok: true, links: [], error: undefined } as T
     case 'save_workspace_file':
       return { ok: true, file_path: '', error: undefined } as T
+    // Projects / FDE (Phase 6)
+    case 'list_projects':
+      return { ok: true, projects: [], error: undefined } as T
+    case 'get_project':
+      return { ok: true, project: null, error: undefined } as T
+    case 'get_project_detail':
+      return { ok: true, project: null, milestones: [], tasks: [], links: [], notes: [], error: undefined } as T
+    case 'upsert_project':
+      return { ok: true, id: '', error: undefined } as T
+    case 'upsert_project_milestone':
+      return { ok: true, id: '', error: undefined } as T
+    case 'upsert_project_task':
+      return { ok: true, id: '', error: undefined } as T
+    case 'upsert_project_link':
+      return { ok: true, id: '', error: undefined } as T
+    case 'upsert_project_note':
+      return { ok: true, id: '', error: undefined } as T
+    case 'seed_fde_project':
+      return { ok: true, id: '', error: undefined } as T
     default:
       throw new Error(`Unknown command: ${cmd}`)
   }
@@ -418,4 +446,23 @@ export const api = {
     invoke<ListTopicLinksResponse>('list_topic_links', { topic_id: topicId }),
   saveWorkspaceFile: (req: SaveWorkspaceFileRequest) =>
     invoke<SaveWorkspaceFileResponse>('save_workspace_file', { req }),
+
+  // Projects / FDE (Phase 6)
+  listProjects: (track?: string) =>
+    invoke<ListProjectsResponse>('list_projects', track ? { track } : {}),
+  getProject: (id: string) =>
+    invoke<ProjectResponse>('get_project', { id }),
+  upsertProject: (req: UpsertProjectRequest) =>
+    invoke<UpsertResponse>('upsert_project', { req }),
+  upsertProjectMilestone: (req: UpsertProjectMilestoneRequest) =>
+    invoke<UpsertResponse>('upsert_project_milestone', { req }),
+  upsertProjectTask: (req: UpsertProjectTaskRequest) =>
+    invoke<UpsertResponse>('upsert_project_task', { req }),
+  upsertProjectLink: (req: UpsertProjectLinkRequest) =>
+    invoke<UpsertResponse>('upsert_project_link', { req }),
+  upsertProjectNote: (req: UpsertProjectNoteRequest) =>
+    invoke<UpsertResponse>('upsert_project_note', { req }),
+  getProjectDetail: (id: string) =>
+    invoke<ProjectDetailResponse>('get_project_detail', { id }),
+  seedFdeProject: () => invoke<UpsertResponse>('seed_fde_project', {}),
 }
