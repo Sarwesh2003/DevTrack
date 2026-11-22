@@ -66,7 +66,7 @@ Implemented one approved phase at a time from `docs/DEVTRACK_IMPLEMENTATION_PLAN
 2. Curriculum data model and 26-week roadmap import (Phase 2 — complete)
 3. Daily planner, weekly goals, custom learning entries, rescheduling and activity tracking (Phase 3 — complete)
 4. NeetCode 250 workspace, attempt/code/notes storage and revision engine (Phase 4 — complete)
-5. Core Java, LLD and HLD workspaces
+5. Core Java, LLD and HLD learning workspaces (Phase 5 — complete)
 6. FDE learning workspace and project portfolio
 7. Analytics, global search, backup/export polish and QA
 8. Optional GitHub/LeetCode integrations
@@ -75,7 +75,7 @@ Implemented one approved phase at a time from `docs/DEVTRACK_IMPLEMENTATION_PLAN
 
 Prerequisites (Mac): Node.js, npm or pnpm, Rust toolchain, Xcode command-line tools.
 
-### Phase 4 (complete)
+### Phase 5 (complete)
 
 1. Frontend: `npm install && npm run dev` (dev) or `npm run build` (production)
 2. Desktop app: `cd src-tauri && cargo tauri dev`
@@ -86,7 +86,7 @@ Prerequisites (Mac): Node.js, npm or pnpm, Rust toolchain, Xcode command-line to
 
 ### Next step
 
-Proceed to Phase 5 (Core Java, LLD and HLD workspaces) after Phase 4 approval.
+Proceed to Phase 6 (FDE learning workspace and project portfolio) after Phase 5 approval.
 
 ## Rules (see AGENTS.md)
 

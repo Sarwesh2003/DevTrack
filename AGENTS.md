@@ -81,6 +81,15 @@
 - `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — DSA types, command wrappers and API-shape tests
 - `docs/PHASE_4_REPORT.md`
 
+## Phase 5 deliverables (complete)
+- `src-tauri/src/migrations.rs` — `SCHEMA_VERSION = 5`; v5 `learning_workspaces` adds `code_experiments`, `recall_questions`, `diagrams`, `design_artifacts`, `case_studies`, `topic_links`
+- `src-tauri/src/workspace.rs` — code experiments, recall questions + review ladder, Mermaid diagrams, LLD design artifacts, HLD case studies, cross-track topic links, safe workspace file save (with list-by-topic commands) (with unit helpers)
+- `src-tauri/src/main.rs` — `workspace` module and all workspace command registrations
+- `src/features/workspace/Workspace.tsx` — Workspace page: track/topic picker and Experiment, Recall, Diagram, Design (LLD), Case Study (HLD), Links tabs
+- `src/App.tsx`, `src/components/layout/Sidebar.tsx`, `src/components/layout/Shell.tsx` — `workspace` page route and nav
+- `src/types/index.ts`, `src/services/api.ts`, `src/services/api.test.ts` — workspace types, command wrappers and API-shape tests
+- `docs/PHASE_5_REPORT.md`
+
 ## Roadmap source (present)
 - `docs/roadmap/six_month_engineering_roadmap.md` — complete 26-week roadmap imported and validated as a planning reference.
 - `docs/roadmap/CURRENT_PROGRESS.yaml` — per-track progress checkpoints (DSA through Trees, LLD through Composite).

@@ -284,4 +284,76 @@ describe('api service', () => {
       url: 'https://leetcode.com/problems/two-sum/',
     })
   })
+
+  it('upsertCodeExperiment nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'exp-1' })
+    await api.upsertCodeExperiment({ topic_id: 't-1', title: 'Demo', code: 'class A {}', language: 'java' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_code_experiment', {
+      req: { topic_id: 't-1', title: 'Demo', code: 'class A {}', language: 'java' },
+    })
+  })
+
+  it('listCodeExperiments sends topic_id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, experiments: [], error: undefined })
+    await api.listCodeExperiments('t-1')
+    expect(mockInvoke).toHaveBeenCalledWith('list_code_experiments', { topic_id: 't-1' })
+  })
+
+  it('upsertRecallQuestion nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'q-1' })
+    await api.upsertRecallQuestion({ topic_id: 't-1', question: 'Q?', answer: 'A', difficulty: 'easy' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_recall_question', {
+      req: { topic_id: 't-1', question: 'Q?', answer: 'A', difficulty: 'easy' },
+    })
+  })
+
+  it('recordRecallReview nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'q-1' })
+    await api.recordRecallReview({ id: 'q-1', recall_result: 'good' })
+    expect(mockInvoke).toHaveBeenCalledWith('record_recall_review', {
+      req: { id: 'q-1', recall_result: 'good' },
+    })
+  })
+
+  it('upsertDiagram nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, id: 'd-1' })
+    await api.upsertDiagram({ topic_id: 't-1', title: 'Flow', mermaid_content: 'graph TD' })
+    expect(mockInvoke).toHaveBeenCalledWith('upsert_diagram', {
+      req: { topic_id: 't-1', title: 'Flow', mermaid_content: 'graph TD' },
+    })
+  })
+
+  it('listDesignArtifacts sends topic_id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, artifacts: [], error: undefined })
+    await api.listDesignArtifacts('t-1')
+    expect(mockInvoke).toHaveBeenCalledWith('list_design_artifacts', { topic_id: 't-1' })
+  })
+
+  it('listCaseStudies sends topic_id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, case_studies: [], error: undefined })
+    await api.listCaseStudies('t-1')
+    expect(mockInvoke).toHaveBeenCalledWith('list_case_studies', { topic_id: 't-1' })
+  })
+
+  it('addTopicLink nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, link: null, error: undefined })
+    await api.addTopicLink({ from_topic_id: 't-1', to_topic_id: 't-2', link_type: 'related' })
+    expect(mockInvoke).toHaveBeenCalledWith('add_topic_link', {
+      req: { from_topic_id: 't-1', to_topic_id: 't-2', link_type: 'related' },
+    })
+  })
+
+  it('listTopicLinks sends topic_id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, links: [], error: undefined })
+    await api.listTopicLinks('t-1')
+    expect(mockInvoke).toHaveBeenCalledWith('list_topic_links', { topic_id: 't-1' })
+  })
+
+  it('saveWorkspaceFile nests the request', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, file_path: '/tmp/x.java', error: undefined })
+    await api.saveWorkspaceFile({ subdir: 'experiments', topic_id: 't-1', file_name: 'A.java', content: 'class A {}' })
+    expect(mockInvoke).toHaveBeenCalledWith('save_workspace_file', {
+      req: { subdir: 'experiments', topic_id: 't-1', file_name: 'A.java', content: 'class A {}' },
+    })
+  })
 })

@@ -51,6 +51,28 @@ import {
   ToggleFavoriteRequest,
   ToggleFavoriteResponse,
   OpenUrlResponse,
+  // Workspace (Phase 5)
+  UpsertCodeExperimentRequest,
+  CodeExperimentResponse,
+  ListCodeExperimentsResponse,
+  UpsertRecallQuestionRequest,
+  RecordRecallReviewRequest,
+  RecallQuestionResponse,
+  ListRecallQuestionsResponse,
+  UpsertDiagramRequest,
+  DiagramResponse,
+  ListDiagramsResponse,
+  UpsertDesignArtifactRequest,
+  DesignArtifactResponse,
+  ListDesignArtifactsResponse,
+  UpsertCaseStudyRequest,
+  CaseStudyResponse,
+  ListCaseStudiesResponse,
+  AddTopicLinkRequest,
+  TopicLinkResponse,
+  ListTopicLinksResponse,
+  SaveWorkspaceFileRequest,
+  SaveWorkspaceFileResponse,
 } from '@/types'
 
 declare global {
@@ -221,6 +243,45 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
       return { ok: true, is_favorite: false, error: undefined } as T
     case 'open_external_url':
       return { ok: true, error: undefined } as T
+    // Workspace (Phase 5)
+    case 'upsert_code_experiment':
+      return { ok: true, id: '', error: undefined } as T
+    case 'get_code_experiment':
+      return { ok: true, experiment: null, error: undefined } as T
+    case 'list_code_experiments':
+      return { ok: true, experiments: [], error: undefined } as T
+    case 'upsert_recall_question':
+      return { ok: true, id: '', error: undefined } as T
+    case 'get_recall_question':
+      return { ok: true, question: null, error: undefined } as T
+    case 'list_recall_questions':
+      return { ok: true, questions: [], error: undefined } as T
+    case 'record_recall_review':
+      return { ok: true, id: '', error: undefined } as T
+    case 'upsert_diagram':
+      return { ok: true, id: '', error: undefined } as T
+    case 'get_diagram':
+      return { ok: true, diagram: null, error: undefined } as T
+    case 'list_diagrams':
+      return { ok: true, diagrams: [], error: undefined } as T
+    case 'upsert_design_artifact':
+      return { ok: true, id: '', error: undefined } as T
+    case 'get_design_artifact':
+      return { ok: true, artifact: null, error: undefined } as T
+    case 'list_design_artifacts':
+      return { ok: true, artifacts: [], error: undefined } as T
+    case 'upsert_case_study':
+      return { ok: true, id: '', error: undefined } as T
+    case 'get_case_study':
+      return { ok: true, case_study: null, error: undefined } as T
+    case 'list_case_studies':
+      return { ok: true, case_studies: [], error: undefined } as T
+    case 'add_topic_link':
+      return { ok: true, link: null, error: undefined } as T
+    case 'list_topic_links':
+      return { ok: true, links: [], error: undefined } as T
+    case 'save_workspace_file':
+      return { ok: true, file_path: '', error: undefined } as T
     default:
       throw new Error(`Unknown command: ${cmd}`)
   }
@@ -317,4 +378,44 @@ export const api = {
     invoke<ToggleFavoriteResponse>('toggle_favorite', { req }),
   openExternalUrl: (url: string) =>
     invoke<OpenUrlResponse>('open_external_url', { url }),
+
+  // Workspace (Phase 5)
+  upsertCodeExperiment: (req: UpsertCodeExperimentRequest) =>
+    invoke<UpsertResponse>('upsert_code_experiment', { req }),
+  getCodeExperiment: (id: string) =>
+    invoke<CodeExperimentResponse>('get_code_experiment', { id }),
+  listCodeExperiments: (topicId: string) =>
+    invoke<ListCodeExperimentsResponse>('list_code_experiments', { topic_id: topicId }),
+  upsertRecallQuestion: (req: UpsertRecallQuestionRequest) =>
+    invoke<UpsertResponse>('upsert_recall_question', { req }),
+  recordRecallReview: (req: RecordRecallReviewRequest) =>
+    invoke<UpsertResponse>('record_recall_review', { req }),
+  getRecallQuestion: (id: string) =>
+    invoke<RecallQuestionResponse>('get_recall_question', { id }),
+  listRecallQuestions: (topicId: string) =>
+    invoke<ListRecallQuestionsResponse>('list_recall_questions', { topic_id: topicId }),
+  upsertDiagram: (req: UpsertDiagramRequest) =>
+    invoke<UpsertResponse>('upsert_diagram', { req }),
+  getDiagram: (id: string) =>
+    invoke<DiagramResponse>('get_diagram', { id }),
+  listDiagrams: (topicId: string) =>
+    invoke<ListDiagramsResponse>('list_diagrams', { topic_id: topicId }),
+  upsertDesignArtifact: (req: UpsertDesignArtifactRequest) =>
+    invoke<UpsertResponse>('upsert_design_artifact', { req }),
+  getDesignArtifact: (id: string) =>
+    invoke<DesignArtifactResponse>('get_design_artifact', { id }),
+  listDesignArtifacts: (topicId: string) =>
+    invoke<ListDesignArtifactsResponse>('list_design_artifacts', { topic_id: topicId }),
+  upsertCaseStudy: (req: UpsertCaseStudyRequest) =>
+    invoke<UpsertResponse>('upsert_case_study', { req }),
+  getCaseStudy: (id: string) =>
+    invoke<CaseStudyResponse>('get_case_study', { id }),
+  listCaseStudies: (topicId: string) =>
+    invoke<ListCaseStudiesResponse>('list_case_studies', { topic_id: topicId }),
+  addTopicLink: (req: AddTopicLinkRequest) =>
+    invoke<TopicLinkResponse>('add_topic_link', { req }),
+  listTopicLinks: (topicId: string) =>
+    invoke<ListTopicLinksResponse>('list_topic_links', { topic_id: topicId }),
+  saveWorkspaceFile: (req: SaveWorkspaceFileRequest) =>
+    invoke<SaveWorkspaceFileResponse>('save_workspace_file', { req }),
 }

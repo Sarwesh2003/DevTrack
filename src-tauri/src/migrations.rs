@@ -1,7 +1,7 @@
 use crate::db::{now_rfc3339, DbResult};
 use rusqlite::Connection;
 
-pub const SCHEMA_VERSION: i32 = 4;
+pub const SCHEMA_VERSION: i32 = 5;
 
 pub fn ensure_schema(conn: &mut Connection) -> DbResult<()> {
   conn.execute_batch(
@@ -415,6 +415,91 @@ fn apply_migration(conn: &mut Connection, version: i32) -> DbResult<()> {
       tx.execute(
         "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
         rusqlite::params![version, "dsa_problem_task_link", now],
+      )?;
+    }
+    5 => {
+      // Phase 5: deeper learning workspaces (Java notes/experiments, LLD design,
+      // HLD case studies) plus Mermaid diagrams, local source-file storage,
+      // recall questions and cross-track topic links.
+      tx.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS code_experiments (
+          id TEXT PRIMARY KEY,
+          topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          code TEXT NOT NULL,
+          language TEXT NOT NULL DEFAULT 'java',
+          file_path TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS recall_questions (
+          id TEXT PRIMARY KEY,
+          topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          question TEXT NOT NULL,
+          answer TEXT NOT NULL,
+          difficulty TEXT NOT NULL DEFAULT 'medium',
+          last_reviewed TEXT,
+          next_review TEXT,
+          interval INTEGER NOT NULL DEFAULT 1,
+          repetition INTEGER NOT NULL DEFAULT 1,
+          state TEXT NOT NULL DEFAULT 'learning',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS diagrams (
+          id TEXT PRIMARY KEY,
+          topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          mermaid_content TEXT NOT NULL,
+          file_path TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS design_artifacts (
+          id TEXT PRIMARY KEY,
+          topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          requirements TEXT,
+          api_spec TEXT,
+          java_implementation TEXT,
+          tests TEXT,
+          trade_offs TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS case_studies (
+          id TEXT PRIMARY KEY,
+          topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          context TEXT,
+          diagram_content TEXT,
+          trade_offs TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS topic_links (
+          id TEXT PRIMARY KEY,
+          from_topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          to_topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+          link_type TEXT NOT NULL DEFAULT 'related',
+          created_at TEXT NOT NULL,
+          UNIQUE(from_topic_id, to_topic_id, link_type)
+        );
+        CREATE INDEX IF NOT EXISTS idx_code_experiments_topic ON code_experiments(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_recall_questions_topic ON recall_questions(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_diagrams_topic ON diagrams(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_design_artifacts_topic ON design_artifacts(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_case_studies_topic ON case_studies(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_topic_links_from ON topic_links(from_topic_id);
+        CREATE INDEX IF NOT EXISTS idx_topic_links_to ON topic_links(to_topic_id);
+        ",
+      )?;
+
+      let now = now_rfc3339();
+      tx.execute(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
+        rusqlite::params![version, "learning_workspaces", now],
       )?;
     }
     _ => {

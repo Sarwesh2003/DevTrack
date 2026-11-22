@@ -638,3 +638,215 @@ export interface OpenUrlResponse {
   ok: boolean
   error?: string
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5: learning workspaces (Java/LLD/HLD)
+// ---------------------------------------------------------------------------
+
+export interface CodeExperiment {
+  id: string
+  topic_id: string
+  title: string
+  code: string
+  language: string
+  file_path?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertCodeExperimentRequest {
+  topic_id: string
+  title: string
+  code: string
+  language?: string
+  id?: string
+}
+
+export interface CodeExperimentResponse {
+  ok: boolean
+  experiment: CodeExperiment | null
+  error?: string
+}
+
+export interface ListCodeExperimentsResponse {
+  ok: boolean
+  experiments: CodeExperiment[]
+  error?: string
+}
+
+export interface RecallQuestion {
+  id: string
+  topic_id: string
+  question: string
+  answer: string
+  difficulty: string
+  last_reviewed?: string
+  next_review?: string
+  interval: number
+  repetition: number
+  state: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertRecallQuestionRequest {
+  topic_id: string
+  question: string
+  answer: string
+  difficulty?: string
+  id?: string
+}
+
+export interface RecordRecallReviewRequest {
+  id: string
+  recall_result: string
+  confidence?: number
+}
+
+export interface RecallQuestionResponse {
+  ok: boolean
+  question: RecallQuestion | null
+  error?: string
+}
+
+export interface ListRecallQuestionsResponse {
+  ok: boolean
+  questions: RecallQuestion[]
+  error?: string
+}
+
+export interface Diagram {
+  id: string
+  topic_id: string
+  title: string
+  mermaid_content: string
+  file_path?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertDiagramRequest {
+  topic_id: string
+  title: string
+  mermaid_content: string
+  id?: string
+}
+
+export interface DiagramResponse {
+  ok: boolean
+  diagram: Diagram | null
+  error?: string
+}
+
+export interface ListDiagramsResponse {
+  ok: boolean
+  diagrams: Diagram[]
+  error?: string
+}
+
+export interface DesignArtifact {
+  id: string
+  topic_id: string
+  title: string
+  requirements?: string
+  api_spec?: string
+  java_implementation?: string
+  tests?: string
+  trade_offs?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertDesignArtifactRequest {
+  topic_id: string
+  title: string
+  requirements?: string
+  api_spec?: string
+  java_implementation?: string
+  tests?: string
+  trade_offs?: string
+  id?: string
+}
+
+export interface DesignArtifactResponse {
+  ok: boolean
+  artifact: DesignArtifact | null
+  error?: string
+}
+
+export interface ListDesignArtifactsResponse {
+  ok: boolean
+  artifacts: DesignArtifact[]
+  error?: string
+}
+
+export interface CaseStudy {
+  id: string
+  topic_id: string
+  title: string
+  context?: string
+  diagram_content?: string
+  trade_offs?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertCaseStudyRequest {
+  topic_id: string
+  title: string
+  context?: string
+  diagram_content?: string
+  trade_offs?: string
+  id?: string
+}
+
+export interface CaseStudyResponse {
+  ok: boolean
+  case_study: CaseStudy | null
+  error?: string
+}
+
+export interface ListCaseStudiesResponse {
+  ok: boolean
+  case_studies: CaseStudy[]
+  error?: string
+}
+
+export interface TopicLink {
+  id: string
+  from_topic_id: string
+  to_topic_id: string
+  link_type: string
+  created_at: string
+}
+
+export interface AddTopicLinkRequest {
+  from_topic_id: string
+  to_topic_id: string
+  link_type?: string
+}
+
+export interface TopicLinkResponse {
+  ok: boolean
+  link: TopicLink | null
+  error?: string
+}
+
+export interface ListTopicLinksResponse {
+  ok: boolean
+  links: TopicLink[]
+  error?: string
+}
+
+export interface SaveWorkspaceFileRequest {
+  subdir: string
+  topic_id: string
+  file_name: string
+  content: string
+}
+
+export interface SaveWorkspaceFileResponse {
+  ok: boolean
+  file_path?: string
+  error?: string
+}

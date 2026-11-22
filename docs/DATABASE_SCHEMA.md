@@ -299,8 +299,83 @@ CREATE TABLE project_links (
 );
 ```
 
-## 8. Content files, activity, settings, import, migrations
+## 7b. Learning workspaces (Phase 5, migration v5)
 
+Added by `SCHEMA_VERSION = 5` (`learning_workspaces`). Each table references `topics(id)` with
+`ON DELETE CASCADE` and has a per-topic index.
+
+```sql
+CREATE TABLE code_experiments (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  code TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'java',
+  file_path TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE recall_questions (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  difficulty TEXT NOT NULL DEFAULT 'medium',
+  last_reviewed TEXT,
+  next_review TEXT,
+  interval INTEGER NOT NULL DEFAULT 1,
+  repetition INTEGER NOT NULL DEFAULT 1,
+  state TEXT NOT NULL DEFAULT 'learning',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE diagrams (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  mermaid_content TEXT NOT NULL,
+  file_path TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE design_artifacts (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  requirements TEXT,
+  api_spec TEXT,
+  java_implementation TEXT,
+  tests TEXT,
+  trade_offs TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE case_studies (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  context TEXT,
+  diagram_content TEXT,
+  trade_offs TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE topic_links (
+  id TEXT PRIMARY KEY,
+  from_topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  to_topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  link_type TEXT NOT NULL DEFAULT 'related',
+  created_at TEXT NOT NULL,
+  UNIQUE(from_topic_id, to_topic_id, link_type)
+);
+```
+
+## 8. Content files, activity, settings, import, migrations
 ```sql
 CREATE TABLE content_files (
   id TEXT PRIMARY KEY,

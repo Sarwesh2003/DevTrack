@@ -9,6 +9,7 @@ mod migrations;
 mod planner;
 mod roadmap_import;
 mod state;
+mod workspace;
 
 use state::AppState;
 
@@ -59,6 +60,25 @@ fn main() {
       learning::create_learning_entry,
       learning::list_learning_entries,
       learning::get_activity_summary,
+      workspace::upsert_code_experiment,
+      workspace::get_code_experiment,
+      workspace::list_code_experiments,
+      workspace::upsert_recall_question,
+      workspace::record_recall_review,
+      workspace::get_recall_question,
+      workspace::list_recall_questions,
+      workspace::upsert_diagram,
+      workspace::get_diagram,
+      workspace::list_diagrams,
+      workspace::upsert_design_artifact,
+      workspace::get_design_artifact,
+      workspace::list_design_artifacts,
+      workspace::upsert_case_study,
+      workspace::get_case_study,
+      workspace::list_case_studies,
+      workspace::add_topic_link,
+      workspace::list_topic_links,
+      workspace::save_workspace_file,
     ])
     .setup(|_app| {
       let _ = db::init_data_dir()?;
