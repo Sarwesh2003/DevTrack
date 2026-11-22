@@ -16,7 +16,19 @@ const TYPE_LABEL: Record<string, string> = {
   entry: 'Learning entry',
 }
 
-export default function Search(_props: { onNavigate: (page: Page) => void }) {
+const TYPE_PAGE: Record<string, Page> = {
+  topic: 'roadmap',
+  problem: 'dsa',
+  project: 'projects',
+  experiment: 'workspace',
+  question: 'workspace',
+  design: 'workspace',
+  case_study: 'workspace',
+  note: 'projects',
+  entry: 'dashboard',
+}
+
+export default function Search({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResponse['results']>([])
   const [loading, setLoading] = useState(false)
@@ -93,19 +105,27 @@ export default function Search(_props: { onNavigate: (page: Page) => void }) {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {results.map((r) => (
-                <tr key={`${r.type}-${r.id}`} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      {TYPE_LABEL[r.type] ?? r.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-medium">{r.title}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground truncate max-w-[260px]">
-                    {r.subtitle ?? '—'}
-                  </td>
-                </tr>
-              ))}
+              {results.map((r) => {
+                const targetPage = TYPE_PAGE[r.type] ?? 'dashboard'
+                return (
+                  <tr key={`${r.type}-${r.id}`} className="hover:bg-muted/30 cursor-pointer">
+                    <td className="px-4 py-3">
+                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        {TYPE_LABEL[r.type] ?? r.type}
+                      </span>
+                    </td>
+                    <td
+                      className="px-4 py-3 font-medium text-primary hover:underline"
+                      onClick={() => onNavigate(targetPage)}
+                    >
+                      {r.title}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground truncate max-w-[260px]">
+                      {r.subtitle ?? '—'}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
