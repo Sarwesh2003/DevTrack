@@ -42,6 +42,11 @@ export interface RestoreResponse {
   error?: string
 }
 
+export interface ResetResponse {
+  ok: boolean
+  error?: string
+}
+
 export interface MigrationsResponse {
   ok: boolean
   version: number

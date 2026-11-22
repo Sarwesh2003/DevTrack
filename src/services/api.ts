@@ -4,6 +4,7 @@ import {
   SaveSettingsResponse,
   BackupResponse,
   RestoreResponse,
+  ResetResponse,
   MigrationsResponse,
   Settings,
   TrackListResponse,
@@ -329,6 +330,8 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
         activity: { total_events: 0, active_days_last30: 0 },
         error: undefined,
       } as T
+    case 'reset_all_data':
+      return { ok: true, error: undefined } as T
     default:
       throw new Error(`Unknown command: ${cmd}`)
   }
@@ -343,6 +346,7 @@ export const api = {
     invoke<BackupResponse>('backup_database', { req: { destination } }),
   restoreDatabase: (source: string) => invoke<RestoreResponse>('restore_database', { req: { source } }),
   runMigrations: () => invoke<MigrationsResponse>('run_migrations'),
+  resetAllData: () => invoke<ResetResponse>('reset_all_data'),
 
   // Curriculum
   getTracks: () => invoke<TrackListResponse>('get_tracks'),

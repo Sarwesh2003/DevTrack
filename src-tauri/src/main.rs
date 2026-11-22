@@ -25,6 +25,7 @@ fn main() {
       commands::open_external_url,
       commands::backup_database,
       commands::restore_database,
+      commands::reset_all_data,
       commands::run_migrations,
       commands::get_roadmap_phases,
       commands::get_roadmap_weeks,

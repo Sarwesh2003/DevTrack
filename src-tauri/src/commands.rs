@@ -5,6 +5,8 @@ use crate::db::{
 use crate::migrations::SCHEMA_VERSION;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
 use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,6 +33,12 @@ pub struct SaveSettingsResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenUrlResponse {
+  pub ok: bool,
+  pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResetResponse {
   pub ok: bool,
   pub error: Option<String>,
 }
@@ -191,6 +199,40 @@ pub async fn restore_database(_app: AppHandle, req: RestoreRequest) -> RestoreRe
   match std::fs::copy(source, &dest) {
     Ok(_) => RestoreResponse { ok: true, error: None },
     Err(e) => RestoreResponse { ok: false, error: Some(e.to_string()) },
+  }
+}
+
+/// Deletes all user data: the SQLite database file and the entire content
+/// directory (Markdown, Java, Mermaid, JSON files). Settings are dropped with
+/// the database. This is irreversible.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn reset_all_data(_app: AppHandle) -> ResetResponse {
+  let data_dir = match crate::db::app_data_dir() {
+    Ok(d) => d,
+    Err(e) => return ResetResponse { ok: false, error: Some(e.to_string()) },
+  };
+
+  let db_path = data_dir.join("devtrack.sqlite");
+  let content_dir = data_dir.join("content");
+
+  let mut errors: Vec<String> = vec![];
+
+  if db_path.exists() {
+    if let Err(e) = fs::remove_file(&db_path) {
+      errors.push(format!("delete database: {e}"));
+    }
+  }
+
+  if content_dir.exists() {
+    if let Err(e) = fs::remove_dir_all(&content_dir) {
+      errors.push(format!("delete content directory: {e}"));
+    }
+  }
+
+  if errors.is_empty() {
+    ResetResponse { ok: true, error: None }
+  } else {
+    ResetResponse { ok: false, error: Some(errors.join("; ")) }
   }
 }
 

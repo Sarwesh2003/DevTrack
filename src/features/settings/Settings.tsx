@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { api } from '@/services/api'
 import { useSettings } from '@/services/useSettings'
 import { WEEKDAY_LABELS } from '@/lib/dates'
 
@@ -40,6 +41,8 @@ export default function Settings({
   const [minMeaningful, setMinMeaningful] = useState('15')
   const [cadence, setCadence] = useState<Record<string, string[]>>(DEFAULT_CADENCE)
   const [saved, setSaved] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
 
   useEffect(() => {
     setStudyDays(settings.study_days ?? [1, 2, 3, 4, 5, 6])
@@ -77,6 +80,17 @@ export default function Settings({
     setSaved(result)
   }
 
+  const handleReset = async () => {
+    setResetConfirm(false)
+    setResetError(null)
+    const result = await api.resetAllData()
+    if (result.ok) {
+      window.location.reload()
+    } else {
+      setResetError(result.error ?? 'Reset failed')
+    }
+  }
+
   if (loading) return <div className="p-4">Loading settings...</div>
 
   return (
@@ -86,9 +100,9 @@ export default function Settings({
         <p className="text-muted-foreground">Configure your local learning workspace.</p>
       </div>
 
-      {error && (
+      {(error || resetError) && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+          {error || resetError}
         </div>
       )}
 
@@ -245,6 +259,39 @@ export default function Settings({
           Weekly Review
         </button>
       </div>
+
+      {resetConfirm ? (
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
+          <h3 className="font-semibold text-destructive">Reset all data</h3>
+          <p className="text-sm text-destructive/80">
+            This will permanently delete your SQLite database and all content files
+            (Markdown, Java, Mermaid, JSON). This cannot be undone.
+          </p>
+          <div className="flex items-center gap-2 mt-3">
+            <button
+              onClick={handleReset}
+              className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
+            >
+              Delete everything
+            </button>
+            <button
+              onClick={() => setResetConfirm(false)}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setResetConfirm(true)}
+            className="rounded-lg border border-destructive bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
+          >
+            Reset all data
+          </button>
+        </div>
+      )}
     </div>
   )
 }
