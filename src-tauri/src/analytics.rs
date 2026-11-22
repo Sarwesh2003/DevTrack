@@ -77,7 +77,7 @@ pub async fn search_all(query: String) -> SearchResponse {
          JOIN modules m ON t.module_id = m.id
          JOIN tracks tr ON m.track_id = tr.id
          WHERE LOWER(t.title) LIKE LOWER(?1) OR LOWER(t.key) LIKE LOWER(?1)
-         ORDER BY tr.position, m.position, t.position LIMIT 50",
+         ORDER BY tr.position, m.position, t.key LIMIT 50",
         &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
@@ -91,7 +91,7 @@ pub async fn search_all(query: String) -> SearchResponse {
 
     // Problems (search title, category, statement, constraints, tags)
     run(&mut conn, &pattern,
-        "SELECT id, title, category, difficulty FROM problems WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(category) LIKE LOWER(?1) OR LOWER(statement) LIKE LOWER(?1) OR LOWER(constraints) LIKE LOWER(?1) OR LOWER(tags) LIKE LOWER(?1) ORDER BY category_order LIMIT 50",
+        "SELECT id, title, category, difficulty FROM problems WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(category) LIKE LOWER(?1) OR LOWER(statement) LIKE LOWER(?1) OR LOWER(constraints) LIKE LOWER(?1) OR LOWER(tags) LIKE LOWER(?1) ORDER BY official_order LIMIT 50",
         &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
