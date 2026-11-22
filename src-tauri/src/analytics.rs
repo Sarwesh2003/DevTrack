@@ -43,6 +43,7 @@ pub async fn search_all(query: String) -> SearchResponse {
   }
 
   let mut found: HashMap<(String, String), SearchResult> = HashMap::new();
+  let mut errors: Vec<String> = vec![];
 
   let insert = |found: &mut HashMap<(String, String), SearchResult>, r: SearchResult| {
     found.entry((r.r#type.clone(), r.id.clone())).or_insert(r);
@@ -52,13 +53,18 @@ pub async fn search_all(query: String) -> SearchResponse {
              pattern: &str,
              sql: &str,
              found: &mut HashMap<(String, String), SearchResult>,
+             errors: &mut Vec<String>,
              map: fn(&rusqlite::Row<'_>) -> rusqlite::Result<SearchResult>| {
-    if let Ok(mut stmt) = conn.prepare(sql) {
-      if let Ok(rows) = stmt.query_map(params![pattern], map) {
-        for r in rows.flatten() {
-          insert(found, r);
+    match conn.prepare(sql) {
+      Ok(mut stmt) => match stmt.query_map(params![pattern], map) {
+        Ok(rows) => {
+          for r in rows.flatten() {
+            insert(found, r);
+          }
         }
-      }
+        Err(e) => errors.push(format!("query_map: {e}")),
+      },
+      Err(e) => errors.push(format!("prepare: {e}")),
     }
   };
 
@@ -72,7 +78,7 @@ pub async fn search_all(query: String) -> SearchResponse {
          JOIN tracks tr ON m.track_id = tr.id
          WHERE LOWER(t.title) LIKE LOWER(?1) OR LOWER(t.key) LIKE LOWER(?1)
          ORDER BY tr.position, m.position, t.position LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "topic".to_string(),
@@ -83,10 +89,10 @@ pub async fn search_all(query: String) -> SearchResponse {
           })
         });
 
-    // Problems
+    // Problems (search title, category, statement, constraints, tags)
     run(&mut conn, &pattern,
-        "SELECT id, title, category, difficulty FROM problems WHERE LOWER(title) LIKE LOWER(?1) ORDER BY category_order LIMIT 50",
-        &mut found,
+        "SELECT id, title, category, difficulty FROM problems WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(category) LIKE LOWER(?1) OR LOWER(statement) LIKE LOWER(?1) OR LOWER(constraints) LIKE LOWER(?1) OR LOWER(tags) LIKE LOWER(?1) ORDER BY category_order LIMIT 50",
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "problem".to_string(),
@@ -100,7 +106,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Projects
     run(&mut conn, &pattern,
         "SELECT id, name, track, slug FROM projects WHERE LOWER(name) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "project".to_string(),
@@ -114,7 +120,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Code experiments
     run(&mut conn, &pattern,
         "SELECT id, title, language FROM code_experiments WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(code) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "experiment".to_string(),
@@ -128,7 +134,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Recall questions
     run(&mut conn, &pattern,
         "SELECT id, question, difficulty FROM recall_questions WHERE LOWER(question) LIKE LOWER(?1) OR LOWER(answer) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "question".to_string(),
@@ -142,7 +148,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Design artifacts
     run(&mut conn, &pattern,
         "SELECT id, title FROM design_artifacts WHERE LOWER(title) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "design".to_string(),
@@ -156,7 +162,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Case studies
     run(&mut conn, &pattern,
         "SELECT id, title FROM case_studies WHERE LOWER(title) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "case_study".to_string(),
@@ -170,7 +176,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Project notes
     run(&mut conn, &pattern,
         "SELECT id, title, kind, content FROM project_notes WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(content) LIKE LOWER(?1) ORDER BY updated_at DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "note".to_string(),
@@ -184,7 +190,7 @@ pub async fn search_all(query: String) -> SearchResponse {
     // Learning entries
     run(&mut conn, &pattern,
         "SELECT id, title, description FROM learning_entries WHERE LOWER(title) LIKE LOWER(?1) OR LOWER(description) LIKE LOWER(?1) ORDER BY entry_date DESC LIMIT 50",
-        &mut found,
+        &mut found, &mut errors,
         |row| {
           Ok(SearchResult {
             r#type: "entry".to_string(),
@@ -200,7 +206,8 @@ pub async fn search_all(query: String) -> SearchResponse {
   results.sort_by(|a, b| a.title.cmp(&b.title));
   results.truncate(100);
 
-  SearchResponse { ok: true, results, error: None }
+  let error = if errors.is_empty() { None } else { Some(errors.join("; ")) };
+  SearchResponse { ok: error.is_none(), results, error }
 }
 
 // ---------------------------------------------------------------------------
