@@ -100,6 +100,10 @@ fn main() {
       let _ = db::init_data_dir()?;
       if let Ok(mut conn) = db::open_connection() {
         let _ = migrations::ensure_schema(&mut conn);
+        // One-time auto-baseline: seed revision items for previously covered
+        // DSA problems that have no attempts and no existing revision item.
+        // Runs only once (no-ops if revision items already exist).
+        let _ = dsa::start_revision_baseline_inner();
       }
       Ok(())
     })

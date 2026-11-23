@@ -1230,8 +1230,7 @@ pub async fn get_revision_queue(req: GetProblemsRequest) -> GetRevisionQueueResp
   }
 }
 
-#[tauri::command]
-pub async fn start_revision_baseline() -> StartRevisionBaselineResponse {
+pub fn start_revision_baseline_inner() -> StartRevisionBaselineResponse {
   let mut conn = match open_connection() {
     Ok(c) => c,
     Err(e) => {
@@ -1264,6 +1263,11 @@ pub async fn start_revision_baseline() -> StartRevisionBaselineResponse {
     created,
     error: None,
   }
+}
+
+#[tauri::command]
+pub async fn start_revision_baseline() -> StartRevisionBaselineResponse {
+  start_revision_baseline_inner()
 }
 
 #[tauri::command]

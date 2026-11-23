@@ -793,18 +793,23 @@ fn generate_day(
 
   // Due revisions (skip items already scheduled as a task).
   let mut due_stmt = conn.prepare(
-    "SELECT r.id, r.source_id FROM revision_items r
+    "SELECT r.id, r.source_id, COALESCE(p.title, r.source_id) FROM revision_items r
+     LEFT JOIN problems p ON p.id = r.source_id
      WHERE r.next_due_date <= ?1
        AND r.id NOT IN (SELECT revision_item_id FROM study_tasks WHERE revision_item_id IS NOT NULL)",
   )?;
-  let due_items: Vec<(String, String)> = due_stmt
+  let due_items: Vec<(String, String, String)> = due_stmt
     .query_map(params![date_str], |row| {
-      Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+      Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, String>(1)?,
+        row.get::<_, String>(2)?,
+      ))
     })?
     .flatten()
     .collect();
 
-  for (rev_id, source_id) in due_items {
+  for (rev_id, _source_id, problem_title) in due_items {
     if remaining < 20 {
       break;
     }
@@ -814,7 +819,7 @@ fn generate_day(
       &plan_id,
       &date_str,
       "revision",
-      &format!("Revision: {source_id}"),
+      &format!("Revision: {problem_title}"),
       "revision",
       None,
       Some(&rev_id),
