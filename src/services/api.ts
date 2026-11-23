@@ -427,8 +427,15 @@ export const api = {
     invoke<GetDsaProgressResponse>('get_dsa_progress', { req: {} }),
   toggleFavorite: (req: ToggleFavoriteRequest) =>
     invoke<ToggleFavoriteResponse>('toggle_favorite', { req }),
-  openExternalUrl: (url: string) =>
-    invoke<OpenUrlResponse>('open_external_url', { url }),
+  openExternalUrl: (url: string) => {
+    const tauriInvoke = getInvoke()
+    if (tauriInvoke) {
+      return invoke<OpenUrlResponse>('open_external_url', { url })
+    }
+    // Dev fallback: open in browser directly
+    window.open(url, '_blank', 'noopener,noreferrer')
+    return Promise.resolve({ ok: true, error: undefined } as OpenUrlResponse)
+  },
 
   // Workspace (Phase 5)
   upsertCodeExperiment: (req: UpsertCodeExperimentRequest) =>
