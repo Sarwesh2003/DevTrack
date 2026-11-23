@@ -59,6 +59,16 @@ function videoLinkForTask(
   return { title: video.title, url: video.url }
 }
 
+function problemLinkForTask(
+  task: StudyTask,
+  problemUrls: Record<string, string>,
+): { title: string; url: string } | null {
+  if (!task.problem_id) return null
+  const url = problemUrls[task.problem_id]
+  if (!url) return null
+  return { title: task.title, url }
+}
+
 export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const [today] = useState(todayISO())
   const [viewDate, setViewDate] = useState(today)
@@ -73,6 +83,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
   const [error, setError] = useState<string | null>(null)
   const [actuals, setActuals] = useState<Record<string, number>>({})
   const [topicResources, setTopicResources] = useState<Record<string, Resource[]>>({})
+  const [problemUrls, setProblemUrls] = useState<Record<string, string>>({})
 
   const [showEntry, setShowEntry] = useState(false)
   const [entryTitle, setEntryTitle] = useState('')
@@ -125,6 +136,24 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
         }
       }
       setTopicResources(newResources)
+    }
+
+    // Fetch problem URLs for DSA tasks with problem_id
+    const problemIds = new Set<string>()
+    for (const t of [...(agendaRes?.tasks ?? []), ...(overdueRes?.tasks ?? [])]) {
+      if (t.problem_id) problemIds.add(t.problem_id)
+    }
+    if (problemIds.size > 0) {
+      const results = await Promise.all(
+        Array.from(problemIds).map((pid) => api.getProblem(pid).catch(() => null)),
+      )
+      const newUrls: Record<string, string> = {}
+      for (const res of results) {
+        if (res?.ok && res.problem) {
+          newUrls[res.problem.id] = res.problem.url
+        }
+      }
+      setProblemUrls((prev) => ({ ...prev, ...newUrls }))
     }
   }, [today, viewDate])
 
@@ -378,6 +407,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
                         🎥
                       </a>
                     )}
+                    {problemLinkForTask(task, problemUrls) && (
+                      <a
+                        href={problemLinkForTask(task, problemUrls)!.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline ml-2"
+                        title="Open on LeetCode"
+                      >
+                        🔗 LeetCode
+                      </a>
+                    )}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {task.estimate_minutes} min planned
@@ -474,6 +514,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: Page) => 
                               title="Watch video"
                             >
                               🎥
+                            </a>
+                          )}
+                          {problemLinkForTask(task, problemUrls) && (
+                            <a
+                              href={problemLinkForTask(task, problemUrls)!.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline ml-2"
+                              title="Open on LeetCode"
+                            >
+                              🔗 LeetCode
                             </a>
                           )}
                         </div>

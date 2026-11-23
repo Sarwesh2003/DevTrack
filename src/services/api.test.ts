@@ -449,4 +449,23 @@ describe('api service', () => {
     await api.getAnalytics()
     expect(mockInvoke).toHaveBeenCalledWith('get_analytics', undefined)
   })
+
+  it('getProblem sends problem_id', async () => {
+    mockInvoke.mockResolvedValue({ ok: true, problem: null, error: undefined })
+    await api.getProblem('p-1')
+    expect(mockInvoke).toHaveBeenCalledWith('get_problem_by_id', {
+      req: { problem_id: 'p-1' },
+    })
+  })
+
+  it('getProblem returns problem with url', async () => {
+    mockInvoke.mockResolvedValue({
+      ok: true,
+      problem: { id: 'p-1', title: 'Two Sum', url: 'https://leetcode.com/problems/two-sum/' },
+      error: undefined,
+    })
+    const res = await api.getProblem('p-1')
+    expect(res.ok).toBe(true)
+    expect(res.problem?.url).toBe('https://leetcode.com/problems/two-sum/')
+  })
 })

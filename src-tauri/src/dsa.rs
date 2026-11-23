@@ -758,7 +758,70 @@ pub async fn get_problems(req: GetProblemsRequest) -> ProblemListResponse {
     total,
     error: None,
   }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetProblemByIdRequest {
+  pub problem_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProblemResponse {
+  pub ok: bool,
+  pub problem: Option<Problem>,
+  pub error: Option<String>,
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn get_problem_by_id(req: GetProblemByIdRequest) -> ProblemResponse {
+  let conn = match open_connection() {
+    Ok(c) => c,
+    Err(e) => {
+      return ProblemResponse {
+        ok: false,
+        problem: None,
+        error: Some(e.to_string()),
+      }
+    }
+  };
+
+  let problem = conn.query_row(
+    "SELECT p.id, p.external_id, p.title, p.category, p.difficulty, p.url, p.official_order,
+            p.is_previously_covered, COALESCE(f.id IS NOT NULL, 0) AS is_favorite,
+            COALESCE(a.attempt_count, 0) AS attempt_count,
+            COALESCE(a.solved, 0) AS solved
+     FROM problems p
+     LEFT JOIN favorites f ON f.problem_id = p.id
+     LEFT JOIN (
+       SELECT problem_id, COUNT(*) AS attempt_count,
+              MAX(CASE WHEN outcome = 'solved' THEN 1 ELSE 0 END) AS solved
+       FROM problem_attempts GROUP BY problem_id
+     ) a ON a.problem_id = p.id
+     WHERE p.id = ?1",
+    params![req.problem_id],
+    |row| {
+      Ok(Problem {
+        id: row.get(0)?,
+        external_id: row.get(1)?,
+        title: row.get(2)?,
+        category: row.get(3)?,
+        difficulty: row.get(4)?,
+        url: row.get(5)?,
+        official_order: row.get(6)?,
+        is_previously_covered: row.get::<_, i32>(7)? != 0,
+        tags: vec![],
+        is_favorite: row.get::<_, i32>(8)? != 0,
+        attempt_count: row.get(9)?,
+        solved: row.get(10)?,
+      })
+    },
+  );
+
+  match problem {
+    Ok(p) => ProblemResponse { ok: true, problem: Some(p), error: None },
+    Err(_) => ProblemResponse { ok: true, problem: None, error: None },
   }
+}
 
 #[tauri::command]
 pub async fn record_attempt(req: RecordAttemptRequest) -> RecordAttemptResponse {

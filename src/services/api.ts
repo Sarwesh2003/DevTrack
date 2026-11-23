@@ -38,6 +38,7 @@ import {
   ImportNeetcodeResponse,
   ProblemListResponse,
   GetProblemsRequest,
+  ProblemResponse,
   RecordAttemptRequest,
   RecordAttemptResponse,
   ListAttemptsResponse,
@@ -230,6 +231,8 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
       } as T
     case 'get_problems':
       return { ok: true, problems: [], total: 0, error: undefined } as T
+    case 'get_problem_by_id':
+      return { ok: true, problem: null, error: undefined } as T
     case 'record_attempt':
       return { ok: true, id: '', error: undefined } as T
     case 'list_attempts':
@@ -409,6 +412,8 @@ export const api = {
     invoke<ImportNeetcodeResponse>('import_neetcode', { req: { content } }),
   getProblems: (req: GetProblemsRequest) =>
     invoke<ProblemListResponse>('get_problems', { req }),
+  getProblem: (problemId: string) =>
+    invoke<ProblemResponse>('get_problem_by_id', { req: { problem_id: problemId } }),
   recordAttempt: (req: RecordAttemptRequest) =>
     invoke<RecordAttemptResponse>('record_attempt', { req }),
   listAttempts: (problemId: string) =>

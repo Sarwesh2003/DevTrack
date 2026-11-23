@@ -505,6 +505,16 @@ export interface ProblemListResponse {
   error?: string
 }
 
+export interface GetProblemByIdRequest {
+  problem_id: string
+}
+
+export interface ProblemResponse {
+  ok: boolean
+  problem: Problem | null
+  error?: string
+}
+
 export interface Attempt {
   id: string
   problem_id: string

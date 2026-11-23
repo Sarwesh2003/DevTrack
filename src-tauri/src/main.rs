@@ -42,6 +42,7 @@ fn main() {
       dsa::preview_neetcode,
       dsa::import_neetcode,
       dsa::get_problems,
+      dsa::get_problem_by_id,
       dsa::record_attempt,
       dsa::list_attempts,
       dsa::save_solution,
